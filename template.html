@@ -1,0 +1,197 @@
+<title>Glass Box Coin</title>
+<meta name="description" content="Live on-chain transparency dashboard: holders, trades, creator position and red-flag checks.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#F2F5F3; --surface:#FFFFFF; --ink:#15201D; --muted:#5A6B66; --line:#D5DEDA;
+  --accent:#0B7A6E; --accent-soft:#DDEFEB; --pass:#2F8F5B; --pass-soft:#E1F2E8;
+  --fail:#C0392B; --fail-soft:#F8E1DE; --warn:#B86E12; --warn-soft:#F7EAD6;
+  --bar:#E4EBE8;
+  --display:"IBM Plex Sans Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"IBM Plex Sans","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,"Courier New",monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0E1614; --surface:#15201D; --ink:#E4ECE9; --muted:#9AAAA5; --line:#2A3833;
+    --accent:#3CC2B0; --accent-soft:#143530; --pass:#5CC98B; --pass-soft:#16301F;
+    --fail:#F07A6C; --fail-soft:#3A1B17; --warn:#E3A24B; --warn-soft:#3A2A12; --bar:#22302C;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0E1614; --surface:#15201D; --ink:#E4ECE9; --muted:#9AAAA5; --line:#2A3833;
+  --accent:#3CC2B0; --accent-soft:#143530; --pass:#5CC98B; --pass-soft:#16301F;
+  --fail:#F07A6C; --fail-soft:#3A1B17; --warn:#E3A24B; --warn-soft:#3A2A12; --bar:#22302C;
+}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
+.wrap{max-width:1080px;margin:0 auto;padding-inline:20px;padding-block:28px 56px;display:grid;gap:28px}
+h1,h2{font-family:var(--display);text-wrap:balance;margin:0;letter-spacing:.01em}
+h1{font-size:clamp(28px,5vw,40px);font-weight:700;line-height:1.05}
+h2{font-size:20px;font-weight:600}
+.label{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+a{color:var(--accent)}
+a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* header */
+.head{display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center}
+.coinimg{width:96px;height:96px;border-radius:14px;border:1px solid var(--line);background:var(--surface);object-fit:cover}
+.head p{margin:6px 0 0;color:var(--muted);max-width:62ch}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;padding:3px 10px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--muted)}
+.chip b{color:var(--ink);font-weight:600}
+.addr{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+.addr code{font-family:var(--mono);font-size:12.5px;background:var(--surface);border:1px solid var(--line);padding:4px 8px;border-radius:6px;word-break:break-all}
+button.copy{font:inherit;font-size:12.5px;padding:4px 10px;border-radius:6px;border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent);cursor:pointer}
+.promise{border-left:3px solid var(--accent);padding:10px 14px;background:var(--accent-soft);border-radius:0 8px 8px 0;font-size:14px;max-width:80ch}
+
+/* summary */
+.progress{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 20px;display:grid;gap:12px}
+.pbar{position:relative;height:16px;background:var(--bar);border-radius:8px;overflow:hidden}
+.pfill{position:absolute;inset:0 auto 0 0;background:var(--accent);border-radius:8px;min-width:3px}
+.pscale{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px}
+.stat .v{font-family:var(--mono);font-size:22px;font-weight:500;font-variant-numeric:tabular-nums}
+.stat .s{font-size:12.5px;color:var(--muted)}
+
+/* flags */
+.flags{display:grid;gap:8px}
+.flag{display:grid;grid-template-columns:28px 1fr auto;gap:12px;align-items:center;padding:12px 14px;border-radius:10px;background:var(--surface);border:1px solid var(--line)}
+.flag .dot{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:13px}
+.flag.ok .dot{background:var(--pass-soft);color:var(--pass)}
+.flag.bad .dot{background:var(--fail-soft);color:var(--fail)}
+.flag .d{font-family:var(--mono);font-size:12.5px;color:var(--muted);text-align:right}
+.flag.bad{border-color:var(--fail)}
+.score{font-family:var(--display);font-size:15px;font-weight:600}
+
+/* tables */
+.two{display:grid;grid-template-columns:1fr 1.25fr;gap:20px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 18px;display:grid;gap:10px;min-width:0}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);text-align:left;font-weight:600;padding:6px 8px;border-bottom:1px solid var(--line)}
+td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+td.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.tag{font-size:11px;padding:1px 7px;border-radius:999px;white-space:nowrap}
+.tag.creator{background:var(--accent-soft);color:var(--accent)}
+.tag.sniper{background:var(--warn-soft);color:var(--warn)}
+.buy{color:var(--pass);font-weight:600}.sell{color:var(--fail);font-weight:600}
+.empty{color:var(--muted);font-size:14px;padding:8px 0}
+
+/* history */
+.hist{display:grid;gap:10px}
+.att{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:start;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.att .n{font-family:var(--display);font-weight:700;font-size:18px;color:var(--muted)}
+.att.current{border-color:var(--accent)}
+.att .note{color:var(--muted);font-size:13.5px;margin-top:2px}
+.att .st{font-family:var(--mono);font-size:12px;color:var(--muted);text-align:right;white-space:nowrap}
+.foot{color:var(--muted);font-size:13px;display:grid;gap:4px;max-width:80ch}
+@media (max-width:760px){.two{grid-template-columns:1fr}.head{grid-template-columns:1fr}.coinimg{width:80px;height:80px}
+  .flag{grid-template-columns:28px 1fr}.flag .d{grid-column:2;text-align:left}.att{grid-template-columns:auto 1fr}.att .st{grid-column:2;text-align:left}}
+@media (prefers-reduced-motion:no-preference){.pfill{transition:width .6s ease}}
+</style>
+
+<div class="wrap" id="app"></div>
+
+<script id="data" type="application/json">__DATA__</script>
+<script>
+(function(){
+  const D = JSON.parse(document.getElementById('data').textContent);
+  const c = D.current;
+  const el = (h) => { const t = document.createElement('template'); t.innerHTML = h.trim(); return t.content; };
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+  const short = a => a ? a.slice(0,4) + '…' + a.slice(-4) : '';
+  const pct = (x,d=2) => (x*100).toFixed(d) + '%';
+  const sol = (x,d=3) => x.toFixed(d) + ' SOL';
+  const when = t => new Date(t*1000).toISOString().replace('T',' ').slice(0,16) + ' UTC';
+  const ago = t => { const s = D.generated - t; if (s < 3600) return Math.round(s/60) + ' min'; if (s < 172800) return (s/3600).toFixed(1) + ' h'; return Math.round(s/86400) + ' days'; };
+  const solscan = (kind, id) => `https://solscan.io/${kind}/${id}`;
+  const passed = c.flags.filter(f => f.ok).length;
+
+  const img = D.image ? `<img class="coinimg" src="${D.image}" alt="${esc(c.name)} coin art">` : '';
+  const app = document.getElementById('app');
+  app.append(el(`
+  <header class="head">
+    ${img}
+    <div>
+      <div class="label">Glass Box Coin · live on-chain dashboard</div>
+      <h1>${esc(c.name)} <span class="mono" style="font-size:.55em;color:var(--muted)">$${esc(c.symbol)}</span></h1>
+      <p>Every number on this page is read from the public Solana blockchain. Nothing here is self-reported, and every figure has a link you can check yourself.</p>
+      <div class="addr"><code id="mint">${esc(c.mint)}</code><button class="copy" id="copyBtn" type="button">Copy address</button>
+        <a href="https://pump.fun/coin/${esc(c.mint)}" target="_blank" rel="noopener">pump.fun page</a> ·
+        <a href="${solscan('token', c.mint)}" target="_blank" rel="noopener">Solscan</a></div>
+      <div class="meta">
+        <span class="chip">Created <b>${when(c.created)}</b></span>
+        <span class="chip">Age <b>${ago(c.created)}</b></span>
+        <span class="chip">Pair <b>${esc(c.quote)}</b></span>
+        <span class="chip">Fees go to <b>${esc(c.reward_mode)}</b></span>
+        <span class="chip">Status <b>${c.graduated ? 'graduated' : 'on bonding curve'}</b></span>
+      </div>
+    </div>
+  </header>
+  <div class="promise"><b>The deal:</b> this is a meme coin, just for fun. No roadmap, no team, no promises about price. The creator's own position is small and shown below, and it will be shown here if it ever changes. Don't buy anything you can't afford to lose.</div>
+
+  <section class="progress" aria-label="Bonding curve progress">
+    <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:baseline">
+      <h2>Bonding curve</h2><span class="mono">${sol(c.real_sol,3)} of ~85 SOL · ${pct(c.curve_progress,2)}</span>
+    </div>
+    <div class="pbar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${(c.curve_progress*100).toFixed(1)}"><div class="pfill" style="width:${Math.max(c.curve_progress*100,0.4)}%"></div></div>
+    <div class="pscale"><span>0 SOL · launch</span><span>42.5</span><span>85 SOL · graduates to PumpSwap</span></div>
+    <div class="stats">
+      <div class="stat"><div class="label">Market cap</div><div class="v">${c.mcap_sol.toFixed(1)} SOL</div><div class="s">${c.mcap_usd ? '≈ $' + Math.round(c.mcap_usd).toLocaleString() : ''}</div></div>
+      <div class="stat"><div class="label">Holders</div><div class="v">${c.holders}</div><div class="s">wallets holding any</div></div>
+      <div class="stat"><div class="label">Outside buyers</div><div class="v">${c.outside_wallets}</div><div class="s">wallets other than the creator</div></div>
+      <div class="stat"><div class="label">Volume</div><div class="v">${c.volume_sol.toFixed(3)}</div><div class="s">SOL traded, ${c.trades} trades</div></div>
+      <div class="stat"><div class="label">Creator fees</div><div class="v">${c.creator_fees_sol.toFixed(4)}</div><div class="s">SOL earned so far</div></div>
+    </div>
+  </section>
+
+  <section style="display:grid;gap:12px" aria-label="Red flag checklist">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
+      <h2>Red-flag checklist</h2><span class="score">${passed} of ${c.flags.length} checks pass</span>
+    </div>
+    <div class="flags">${c.flags.map(f => `
+      <div class="flag ${f.ok ? 'ok' : 'bad'}"><span class="dot" aria-hidden="true">${f.ok ? '✓' : '!'}</span>
+        <span>${esc(f.check)}<span class="sr" style="position:absolute;left:-9999px">${f.ok ? ' passes' : ' fails'}</span></span>
+        <span class="d">${esc(f.detail)}</span></div>`).join('')}</div>
+    <div class="foot">These are the warning signs that most often come before a dump on pump.fun, based on our study of ~400,000 launches: large creator buys, creator selling, bundled sniper wallets, concentrated holders, instant self-funded graduation, and supply-changing mayhem mode.</div>
+  </section>
+
+  <section class="two">
+    <div class="panel"><h2>Top holders</h2>
+      ${c.top_holders.length ? `<div class="tbl"><table><thead><tr><th>Wallet</th><th></th><th style="text-align:right">Supply</th></tr></thead><tbody>
+      ${c.top_holders.map(h => `<tr><td class="mono"><a href="${solscan('account', h.wallet)}" target="_blank" rel="noopener">${short(h.wallet)}</a></td>
+        <td>${h.tag ? `<span class="tag ${h.tag === 'creator' ? 'creator' : 'sniper'}">${esc(h.tag)}</span>` : ''}</td><td class="num">${pct(h.pct,3)}</td></tr>`).join('')}
+      </tbody></table></div>
+      <div class="s" style="font-size:12.5px;color:var(--muted)">Top 10 hold ${pct(c.top10_pct,2)} of supply. The rest is still in the bonding curve, unsold.</div>` : '<div class="empty">No holders yet.</div>'}
+    </div>
+    <div class="panel"><h2>Recent trades</h2>
+      ${c.recent_trades.length ? `<div class="tbl"><table><thead><tr><th>Time (UTC)</th><th>Side</th><th style="text-align:right">SOL</th><th>Wallet</th></tr></thead><tbody>
+      ${c.recent_trades.map(t => `<tr><td class="mono"><a href="${solscan('tx', t.sig)}" target="_blank" rel="noopener">${when(t.time).slice(5,16)}</a></td>
+        <td class="${t.side}">${t.side}</td><td class="num">${t.sol.toFixed(4)}</td>
+        <td class="mono">${short(t.wallet)} ${t.tag ? `<span class="tag ${t.tag === 'creator' ? 'creator' : 'sniper'}">${esc(t.tag)}</span>` : ''}</td></tr>`).join('')}
+      </tbody></table></div>` : '<div class="empty">No trades yet.</div>'}
+    </div>
+  </section>
+
+
+  <footer class="foot">
+    <div>Updated ${when(D.generated)}, refreshed automatically about every 10 minutes. Holders are rebuilt from bonding-curve trades, so tokens moved between wallets outside a trade aren't counted.</div>
+    <div>Anyone can check these numbers: paste the coin address into Solscan or any Solana explorer.</div>
+  </footer>`));
+
+  const btn = document.getElementById('copyBtn');
+  btn.addEventListener('click', () => {
+    const txt = c.mint;
+    const done = () => { btn.textContent = 'Copied'; setTimeout(() => btn.textContent = 'Copy address', 1500); };
+    try {
+      navigator.clipboard.writeText(txt).then(done, () => { selectMint(); });
+    } catch (e) { selectMint(); }
+  });
+  function selectMint(){ const r = document.createRange(); r.selectNodeContents(document.getElementById('mint')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent = 'Press Ctrl+C'; }
+})();
+</script>
