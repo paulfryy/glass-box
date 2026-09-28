@@ -12,6 +12,7 @@ const SUPPLY = 1_000_000_000;
 const GRAD_REAL_SOL = 85;
 const CACHE_TTL_S = 300;
 const RATE_PER_MIN = 30;
+const CHECKS_VERSION = "v3";   // bump whenever the checks change, so cached results from older logic are ignored
 const ALLOWED_ORIGINS = ["https://glassbox.gripe", "https://www.glassbox.gripe", "http://localhost:8000"];
 
 // ---------- base58 ----------
@@ -207,7 +208,7 @@ export default {
     if (url.pathname !== "/check") return json({ ok: false, error: "Use /check?mint=<coin address>" }, 404, origin);
     const mint = (url.searchParams.get("mint") || "").trim();
     if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(mint)) return json({ ok: false, error: "That isn't a valid Solana address." }, 400, origin);
-    const cacheKey = new Request(`https://cache.glassbox/check/${mint}`);
+    const cacheKey = new Request(`https://cache.glassbox/${CHECKS_VERSION}/check/${mint}`);
     const hit = await caches.default.match(cacheKey);
     if (hit) { const body = await hit.json(); return json({ ...body, cached: true }, 200, origin); }
     if (limited(request.headers.get("CF-Connecting-IP") || "?")) return json({ ok: false, error: "Too many checks. Wait a minute and try again." }, 429, origin);
