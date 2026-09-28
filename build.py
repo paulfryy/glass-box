@@ -71,6 +71,12 @@ def rpc_txs(key, address, t_start, t_end, max_pages):
     return out, True
 
 
+def rpc(key, method, params):
+    r = requests.post(f"https://mainnet.helius-rpc.com/?api-key={key}",
+                      json={"jsonrpc": "2.0", "id": 1, "method": method, "params": params}, timeout=60)
+    return r.json().get("result")
+
+
 def events(tx):
     lw = tx["meta"].get("loadedAddresses") or {}
     keys = tx["transaction"]["message"]["accountKeys"] + lw.get("writable", []) + lw.get("readonly", [])
@@ -150,6 +156,10 @@ def snapshot(key, mint, lookback_days, max_pages):
         fees += t["sol"] * t["creator_fee_bps"] / 1e4
     holders = {w: v for w, v in held.items() if v > 1}
     snipers = {w for w, ts in first_buy.items() if w not in creators and ts - t0 <= SNIPER_WINDOW_S}
+    launch_bought = sum(t["tok"] for t in trades if t["is_buy"] and t["trader"] not in creators
+                        and t["time"] - t0 <= SNIPER_WINDOW_S)
+    mi = ((rpc(key, "getAccountInfo", [mint, {"encoding": "jsonParsed"}]) or {}).get("value") or {})
+    mi = (mi.get("data") or {}).get("parsed", {}).get("info", {}) if isinstance(mi.get("data"), dict) else {}
     last = trades[-1] if trades else None
     v_sol = last["v_sol"] if last else create["v_sol0"] / 1e9
     v_tok = last["v_tok"] if last else create["v_tok0"] / 1e6
@@ -163,9 +173,15 @@ def snapshot(key, mint, lookback_days, max_pages):
     usd = sol_usd()
     tag = lambda w: "creator" if w in creators else ("launch sniper" if w in snipers else "")  # noqa: E731
     flags = [
+        ("Mint authority revoked (no one can print more tokens)", not mi.get("mintAuthority"),
+         "still active" if mi.get("mintAuthority") else "revoked"),
+        ("Freeze authority revoked (your tokens can't be frozen)", not mi.get("freezeAuthority"),
+         "still active" if mi.get("freezeAuthority") else "revoked"),
+        ("Launch buyers took < 20% of supply", launch_bought < 0.20 * SUPPLY,
+         f"{len(snipers)} wallet(s) bought {launch_bought / SUPPLY:.2%} within 2 s of launch"),
         ("Creator's launch buy is small (≤ 1% of supply)", creator_bought <= 0.01 * SUPPLY, f"{creator_bought / SUPPLY:.2%} of supply"),
         ("Creator has never sold", not creator_sold, "sold" if creator_sold else "no sells on record"),
-        ("Launch snipers hold < 5% of supply", sniper_now <= 0.05 * SUPPLY, f"{len(snipers)} sniper wallet(s), holding {sniper_now / SUPPLY:.2%}"),
+        ("Launch snipers still hold < 5% of supply", sniper_now <= 0.05 * SUPPLY, f"launch wallets now hold {sniper_now / SUPPLY:.2%}"),
         ("Top-10 holders own < 30% of supply", top10 <= 0.30 * SUPPLY, f"{top10 / SUPPLY:.2%}"),
         ("No instant (< 1 min) self-funded graduation", not (migrated and migrated - t0 < 60),
          "not graduated" if not migrated else f"graduated after {(migrated - t0) / 60:.1f} min"),
