@@ -92,10 +92,47 @@ td.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-num
 .foot{color:var(--muted);font-size:13px;display:grid;gap:4px;max-width:80ch}
 @media (max-width:760px){.two{grid-template-columns:1fr}.head{grid-template-columns:1fr}.coinimg{width:80px;height:80px}
   .flag{grid-template-columns:28px 1fr}.flag .d{grid-column:2;text-align:left}.att{grid-template-columns:auto 1fr}.att .st{grid-column:2;text-align:left}}
+
+/* tabs + checker */
+.tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);padding-bottom:0}
+.tabs a{font-family:var(--display);font-weight:600;font-size:15px;text-decoration:none;color:var(--muted);padding:10px 14px;border-bottom:3px solid transparent;margin-bottom:-1px}
+.tabs a[aria-current="page"]{color:var(--ink);border-bottom-color:var(--accent)}
+.checkform{display:flex;flex-wrap:wrap;gap:10px}
+.checkform input{flex:1 1 320px;min-width:0;font-family:var(--mono);font-size:14px;padding:11px 12px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.checkform input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.checkform button{font-family:var(--display);font-weight:600;font-size:15px;padding:10px 20px;border-radius:8px;border:0;background:var(--accent);color:#fff;cursor:pointer}
+.checkform button:disabled{opacity:.6;cursor:wait}
+.verdict{border-radius:12px;padding:16px 18px;display:grid;gap:4px;border:1px solid var(--line);background:var(--surface)}
+.verdict .big{font-family:var(--display);font-size:24px;font-weight:700}
+.verdict.clean{border-color:var(--pass);background:var(--pass-soft)}.verdict.clean .big{color:var(--pass)}
+.verdict.mixed,.verdict.caution{border-color:var(--warn);background:var(--warn-soft)}.verdict.mixed .big,.verdict.caution .big{color:var(--warn)}
+.verdict.danger{border-color:var(--fail);background:var(--fail-soft)}.verdict.danger .big{color:var(--fail)}
+.why{font-size:12.5px;color:var(--muted);margin-top:2px}
+.sev{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-left:6px}
+.err{color:var(--fail)}
+
 @media (prefers-reduced-motion:no-preference){.pfill{transition:width .6s ease}}
 </style>
 
+<div class="wrap" style="padding-block:18px 0">
+  <nav class="tabs" aria-label="Sections">
+    <a href="#coin" id="tabCoin" aria-current="page">This coin</a>
+    <a href="#check" id="tabCheck">Check any coin</a>
+  </nav>
+</div>
 <div class="wrap" id="app"></div>
+<div class="wrap" id="checker" hidden>
+  <section style="display:grid;gap:10px">
+    <h1>Check any pump.fun coin</h1>
+    <p style="margin:0;color:var(--muted);max-width:66ch">Paste a coin's address to see the same red-flag checks this site runs on its own coin, read live from the Solana blockchain. These are warning signs, not guarantees.</p>
+    <form class="checkform" id="checkForm" autocomplete="off">
+      <label for="mintInput" class="label" style="position:absolute;left:-9999px">Coin address</label>
+      <input id="mintInput" name="mint" placeholder="e.g. 6TYhdKYd9bi4jueYJ1TswkNx28ZjqdjKBkH2mmFcpump" spellcheck="false" required>
+      <button id="checkBtn" type="submit">Check coin</button>
+    </form>
+  </section>
+  <div id="checkOut" aria-live="polite"></div>
+</div>
 
 <script id="data" type="application/json">__DATA__</script>
 <script>
@@ -193,5 +230,49 @@ td.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-num
     } catch (e) { selectMint(); }
   });
   function selectMint(){ const r = document.createRange(); r.selectNodeContents(document.getElementById('mint')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent = 'Press Ctrl+C'; }
+})();
+</script>
+
+<script>
+(function(){
+  const API = "https://api.glassbox.gripe/check?mint=";
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+  const short = a => a ? a.slice(0,4) + '…' + a.slice(-4) : '';
+  const labels = {clean:'No red flags found', mixed:'Some warning signs', caution:'Caution', danger:'High risk'};
+  function show(tab){
+    const check = tab === 'check';
+    $('app').hidden = check; $('checker').hidden = !check;
+    $('tabCoin').toggleAttribute('aria-current', !check); $('tabCheck').toggleAttribute('aria-current', check);
+    if (check) $('tabCheck').setAttribute('aria-current','page'); else $('tabCoin').setAttribute('aria-current','page');
+  }
+  window.addEventListener('hashchange', () => show(location.hash.slice(1)));
+  show(location.hash.slice(1));
+  $('checkForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const mint = $('mintInput').value.trim(), out = $('checkOut'), btn = $('checkBtn');
+    btn.disabled = true; btn.textContent = 'Checking…'; out.innerHTML = '<p class="why">Reading the blockchain…</p>';
+    try {
+      const r = await fetch(API + encodeURIComponent(mint)); const d = await r.json();
+      if (!d.ok) { out.innerHTML = `<p class="err">${esc(d.error || 'Something went wrong.')}</p>`; return; }
+      out.innerHTML = `
+      <div style="display:grid;gap:16px">
+        <div class="verdict ${d.verdict}"><span class="label">Verdict</span><span class="big">${labels[d.verdict]}</span>
+          <span>${esc(d.name)} <span class="mono">$${esc(d.symbol)}</span> · ${d.failCount} of ${d.flags.length} checks failed · ${d.graduated ? 'graduated' : (d.curveProgress*100).toFixed(1) + '% of the way to graduation'} · market cap ${d.mcapSol.toFixed(1)} SOL</span>
+          <span class="why">${esc(d.note)}</span></div>
+        <div class="flags">${d.flags.map(f => `
+          <div class="flag ${f.ok ? 'ok' : 'bad'}"><span class="dot" aria-hidden="true">${f.ok ? '✓' : '!'}</span>
+            <span>${esc(f.check)}<span class="sev">${esc(f.severity)}</span>${f.ok ? '' : `<div class="why">${esc(f.why)}</div>`}</span>
+            <span class="d">${esc(f.detail)}</span></div>`).join('')}</div>
+        <div class="panel"><h2>Top holders</h2><div class="tbl"><table><thead><tr><th>Wallet</th><th></th><th style="text-align:right">Supply</th></tr></thead><tbody>
+          ${d.topHolders.map(h => `<tr><td class="mono">${h.wallet ? `<a href="https://solscan.io/account/${esc(h.wallet)}" target="_blank" rel="noopener">${short(h.wallet)}</a>` : '–'}</td>
+            <td>${h.tag ? `<span class="tag ${h.tag === 'creator' ? 'creator' : 'sniper'}">${esc(h.tag)}</span>` : ''}</td><td class="num">${(h.pct*100).toFixed(3)}%</td></tr>`).join('')}
+          </tbody></table></div></div>
+        <p class="why">Verify: <a href="https://pump.fun/coin/${esc(d.mint)}" target="_blank" rel="noopener">pump.fun page</a> · <a href="https://solscan.io/token/${esc(d.mint)}" target="_blank" rel="noopener">Solscan</a>${d.cached ? ' · result cached for up to 5 minutes' : ''}</p>
+      </div>`;
+    } catch (err) {
+      out.innerHTML = '<p class="err">Couldn\'t reach the checker. Check your connection and try again.</p>';
+    } finally { btn.disabled = false; btn.textContent = 'Check coin'; }
+  });
 })();
 </script>

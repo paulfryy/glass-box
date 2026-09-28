@@ -1,3 +1,5 @@
 public/
 .env
 __pycache__/
+worker/node_modules/
+worker/.wrangler/

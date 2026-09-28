@@ -1,0 +1,9 @@
+name = "glassbox-api"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+workers_dev = false
+
+# Served at https://api.glassbox.gripe (Cloudflare creates the DNS record automatically)
+routes = [{ pattern = "api.glassbox.gripe", custom_domain = true }]
+
+# Secret (not in this file): HELIUS_API_KEY  ->  npx wrangler secret put HELIUS_API_KEY
