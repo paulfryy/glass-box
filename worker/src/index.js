@@ -187,6 +187,20 @@ export async function checkCoin(env, mint) {
   };
 }
 
+
+// ---------- clock: rebuild the coin dashboard every 10 minutes ----------
+// GitHub's own scheduler skips frequent jobs, so a Cloudflare Cron Trigger starts the
+// GitHub Action instead. GITHUB_TOKEN is a fine-grained token limited to Actions on this repo.
+async function triggerRebuild(env) {
+  const r = await fetch("https://api.github.com/repos/paulfryy/glass-box/actions/workflows/update.yml/dispatches", {
+    method: "POST",
+    headers: { Authorization: "Bearer " + env.GITHUB_TOKEN, Accept: "application/vnd.github+json",
+      "User-Agent": "glassbox-api", "X-GitHub-Api-Version": "2022-11-28" },
+    body: JSON.stringify({ ref: "main" }),
+  });
+  if (r.status !== 204) console.log("rebuild trigger failed", r.status, (await r.text()).slice(0, 200));
+}
+
 // ---------- HTTP ----------
 const hits = new Map();   // best-effort per-isolate rate limit
 function limited(ip) {
@@ -202,6 +216,10 @@ const json = (obj, status, origin, extra = {}) => new Response(JSON.stringify(ob
   status, headers: { "content-type": "application/json", ...cors(origin), ...extra } });
 
 export default {
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(triggerRebuild(env));
+  },
+
   async fetch(request, env, ctx) {
     const url = new URL(request.url), origin = request.headers.get("Origin") || "";
     if (request.method === "OPTIONS") return new Response(null, { headers: cors(origin) });

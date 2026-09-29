@@ -1,8 +1,6 @@
 name: Refresh dashboard
 on:
-  schedule:
-    - cron: "*/10 * * * *"     # every 10 minutes (GitHub may run it a few minutes late)
-  workflow_dispatch: {}          # "Run workflow" button for an instant refresh
+  workflow_dispatch: {}          # started every 10 minutes by the Cloudflare Worker's cron, or by hand
   push:
     branches: [main]             # rebuild immediately when config.yaml changes
 permissions:

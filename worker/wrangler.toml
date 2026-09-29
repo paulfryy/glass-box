@@ -7,3 +7,7 @@ workers_dev = false
 routes = [{ pattern = "api.glassbox.gripe", custom_domain = true }]
 
 # Secret (not in this file): HELIUS_API_KEY  ->  npx wrangler secret put HELIUS_API_KEY
+
+# Rebuild the coin dashboard every 10 minutes (starts the GitHub Action via GITHUB_TOKEN)
+[triggers]
+crons = ["*/10 * * * *"]
