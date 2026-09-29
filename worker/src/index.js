@@ -12,7 +12,7 @@ const SUPPLY = 1_000_000_000;
 const GRAD_REAL_SOL = 85;
 const CACHE_TTL_S = 300;
 const RATE_PER_MIN = 30;
-const CHECKS_VERSION = "v3";   // bump whenever the checks change, so cached results from older logic are ignored
+const CHECKS_VERSION = "v4";   // bump whenever the checks change, so cached results from older logic are ignored
 const ALLOWED_ORIGINS = ["https://glassbox.gripe", "https://www.glassbox.gripe", "http://localhost:8000"];
 
 // ---------- base58 ----------
@@ -161,8 +161,13 @@ export async function checkCoin(env, mint) {
       "An active freeze authority can lock holders' tokens so they can't sell."),
     f("Not in mayhem mode (supply can't change)", !create.mayhem, create.mayhem ? "mayhem mode" : "standard curve", "high",
       "Mayhem-mode coins let the protocol change the curve and supply for 24 hours."),
-    f("Creator's launch buy is small (≤ 1% of supply)", devBuy <= 0.01 * SUPPLY, `${(devBuy / SUPPLY * 100).toFixed(2)}% of supply`, "medium",
-      "A big launch buy gives the creator cheap supply to sell into later buyers."),
+    // Thresholds from 12 days of pump.fun launches: the median outside buyer does about the same
+    // below ~3%, loses noticeably more at 3-10% (~-4% to -7%) and ~3-4x more at 10%+ (~-11%).
+    f("Creator's launch buy is under 3% of supply", devBuy < 0.03 * SUPPLY, `${(devBuy / SUPPLY * 100).toFixed(2)}% of supply`,
+      devBuy >= 0.10 * SUPPLY ? "high" : "medium",
+      devBuy >= 0.10 * SUPPLY
+        ? "Launch buys of 10% or more came with outside buyers losing about 3-4x more than on small-buy launches in our data."
+        : "Launch buys of 3-10% came with noticeably worse results for outside buyers in our data."),
     f("Creator still holds their launch buy", !soldDown, devBuy ? (soldDown ? `holds ${(creatorBalance / devBuy * 100).toFixed(0)}% of what they bought` : "still holding") : "no launch buy", "high",
       "Creators selling early is the most direct sign a coin is being dumped. (Tokens moved to another wallet also count as sold here.)"),
     f("Launch buyers took < 20% of supply", sniperBought < 0.20 * SUPPLY, `${sniperWallets.length} wallet(s) bought ${(sniperBought / SUPPLY * 100).toFixed(2)}% within 2 s of launch`, "high",

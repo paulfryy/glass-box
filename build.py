@@ -179,7 +179,7 @@ def snapshot(key, mint, lookback_days, max_pages):
          "still active" if mi.get("freezeAuthority") else "revoked"),
         ("Launch buyers took < 20% of supply", launch_bought < 0.20 * SUPPLY,
          f"{len(snipers)} wallet(s) bought {launch_bought / SUPPLY:.2%} within 2 s of launch"),
-        ("Creator's launch buy is small (≤ 1% of supply)", creator_bought <= 0.01 * SUPPLY, f"{creator_bought / SUPPLY:.2%} of supply"),
+        ("Creator's launch buy is under 3% of supply", creator_bought < 0.03 * SUPPLY, f"{creator_bought / SUPPLY:.2%} of supply"),
         ("Creator has never sold", not creator_sold, "sold" if creator_sold else "no sells on record"),
         ("Launch snipers still hold < 5% of supply", sniper_now <= 0.05 * SUPPLY, f"launch wallets now hold {sniper_now / SUPPLY:.2%}"),
         ("Top-10 holders own < 30% of supply", top10 <= 0.30 * SUPPLY, f"{top10 / SUPPLY:.2%}"),
