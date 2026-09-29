@@ -76,8 +76,22 @@ td.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .side{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
 .side.long{color:var(--pass)} .side.short{color:var(--fail)}
 .empty{color:var(--muted);font-size:14px}
-.live{font-size:13.5px;color:var(--muted);background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;padding:10px 14px;max-width:90ch}
-.live b{font-family:var(--mono);font-size:15px}
+.hero-grid{display:grid;grid-template-columns:minmax(260px,1.1fr) 2fr;gap:24px;align-items:start}
+.hero{display:grid;gap:4px}
+.hero .big{font-size:clamp(34px,6vw,46px);font-weight:500;line-height:1.05;font-variant-numeric:tabular-nums}
+.hero .delta{font-family:var(--mono);font-size:17px;font-weight:500}
+.hero .s{font-size:12.5px;color:var(--muted);max-width:44ch}
+.normal{margin:0;font-size:13.5px;color:var(--muted);border-left:3px solid var(--warn);background:var(--warn-soft);padding:10px 14px;border-radius:0 8px 8px 0;max-width:90ch}
+.normal b{color:var(--ink)}
+.movers{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:baseline;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;padding:10px 14px}
+.movers > b{font-size:17px}
+.mover{font-size:13.5px;white-space:nowrap}
+td.pl{font-weight:600}
+.term{border-bottom:1px dotted currentColor;cursor:help}
+.glossary{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px 18px;margin:0;font-size:13px}
+.glossary div{display:grid;gap:2px}
+.glossary dt{font-weight:600}
+.glossary dd{margin:0;color:var(--muted)}
 
 .checkpoints{display:grid;gap:8px}
 .cp{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:baseline;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
@@ -87,7 +101,8 @@ details.how{background:var(--surface);border:1px solid var(--line);border-radius
 details.how summary{cursor:pointer;font-family:var(--display);font-weight:600;font-size:17px}
 details.how ul{margin:10px 0 0;padding-left:20px;display:grid;gap:6px;max-width:80ch}
 .foot{color:var(--muted);font-size:13px;display:grid;gap:4px;max-width:80ch}
-@media (max-width:760px){.book{grid-template-columns:1fr}}
+@media (max-width:760px){.book{grid-template-columns:1fr}.hero-grid{grid-template-columns:1fr}}
+@media (max-width:560px){.hide-sm{display:none}.wrap{padding-inline:16px}td,th{padding-inline:6px}}
 </style>
 
 <div class="wrap" style="padding-block:18px 0">
@@ -107,24 +122,48 @@ details.how ul{margin:10px 0 0;padding-left:20px;display:grid;gap:6px;max-width:
   const pct = (x, d=1) => (x >= 0 ? '+' : '−') + Math.abs(x * 100).toFixed(d) + '%';
   const cls = x => x > 0 ? 'up' : (x < 0 ? 'down' : '');
   const usd = x => '$' + x.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  const usd0 = x => '$' + Math.round(x).toLocaleString('en-US');
+  const sgn$ = x => (Math.round(x) >= 0 ? '+' : '−') + '$' + Math.abs(Math.round(x)).toLocaleString('en-US');
   const price = x => x == null ? '–' : (x >= 1 ? x.toFixed(3) : x.toPrecision(4));
   const fmtDate = s => new Date(s + 'T00:00:00Z').toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC'});
   const addDays = (s, n) => { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+  // times in the visitor's own zone, with UTC alongside
+  const localTime = ms => { const d = new Date(ms);
+    return `${d.toLocaleString('en-US', {month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short'})} (${d.toISOString().slice(11, 16)} UTC)`; };
+  const utcStamp = s => Date.parse(String(s).replace(' ', 'T') + ':00Z');
   const START = '2026-09-28';
-  const usd0 = x => '$' + Math.round(x).toLocaleString('en-US');
   const bank = usd0(D.bankroll);
-  const gross = D.book.reduce((s, p) => s + Math.abs(p.weight), 0);
+  const TIP = {
+    long: 'Long: a bet that the price rises. Gains when it goes up.',
+    short: 'Short: a bet that the price falls. Gains when it goes down, loses when it goes up.',
+    funding: 'Funding: a small fee that futures longs and shorts pay each other every few hours.',
+  };
+  const term = (word, tip) => `<span class="term" title="${esc(tip)}">${word}</span>`;
 
+  // ---- official account (Binance daily closes)
   const eq = D.equity;
   const last = eq.length ? eq[eq.length - 1] : null;
-  const ret = last ? last.e / D.bankroll - 1 : 0;
+  const official = last ? last.e : D.bankroll;
   const btcRet = last ? last.b / D.bankroll - 1 : 0;
   let peak = D.bankroll, dd = 0;
   for (const r of eq) { peak = Math.max(peak, r.e); dd = Math.min(dd, r.e / peak - 1); }
+  const wk = D.weeks.length ? D.weeks[D.weeks.length - 1] : null;
+  // account value at the close that opened this week (position sizes are shares of it)
+  const weekBase = !wk || wk === START ? D.bankroll : ((eq.find(r => r.d === wk) || {}).e || official);
+  const gross = D.book.reduce((s, p) => s + Math.abs(p.weight), 0);
+
+  // ---- live marks (indicative) from api.glassbox.gripe/prices; fall back to the last daily close
+  let live = null;
+  const mark = p => { const lp = live && live.prices[p.coin + 'USDT']; return lp ? {px: lp, live: true} : {px: p.now, live: false}; };
+  const dir = p => p.side === 'long' ? 1 : -1;
+  const pnlWeek = p => { const m = mark(p); return m.px == null ? 0 : Math.abs(p.weight) * weekBase * (m.px / p.entry - 1) * dir(p); };
+  // live value = official value at the last close, moved by each position's change since that close
+  const liveValue = () => official * (1 + D.book.reduce((s, p) => { const m = mark(p);
+    return s + (m.px == null || p.now == null ? 0 : p.weight * (m.px / p.now - 1)); }, 0));
 
   // ---- chart
   function chart(){
-    if (eq.length < 2) return `<p class="empty">The chart starts once there are two daily closes after ${fmtDate(START)}.</p>`;
+    if (eq.length < 2) return `<p class="empty">The chart starts after the second daily close. Until then, the live number above is the one to watch.</p>`;
     const pts = [{d: START, e: D.bankroll, b: D.bankroll}, ...eq];
     const W = 800, H = 240, pl = 56, pr = 12, pt = 12, pb = 28;
     const vals = pts.flatMap(p => [p.e, p.b]);
@@ -136,7 +175,7 @@ details.how ul{margin:10px 0 0;padding-left:20px;display:grid;gap:6px;max-width:
     const ticks = [lo + pad, (lo + hi) / 2, hi - pad];
     return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Paper account value compared with holding BTC, since ${fmtDate(START)}">
       ${ticks.map(t => `<line x1="${pl}" x2="${W - pr}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)"/>
-        <text x="${pl - 8}" y="${y(t) + 4}" text-anchor="end" font-size="11" fill="var(--muted)" font-family="var(--mono)">$${Math.round(t)}</text>`).join('')}
+        <text x="${pl - 8}" y="${y(t) + 4}" text-anchor="end" font-size="11" fill="var(--muted)" font-family="var(--mono)">${usd0(t)}</text>`).join('')}
       <line x1="${pl}" x2="${W - pr}" y1="${y(D.bankroll)}" y2="${y(D.bankroll)}" stroke="var(--muted)" stroke-dasharray="3 4" opacity=".6"/>
       <polyline points="${line('b')}" fill="none" stroke="var(--btc)" stroke-width="2"/>
       <polyline points="${line('e')}" fill="none" stroke="var(--accent)" stroke-width="2.5"/>
@@ -145,51 +184,96 @@ details.how ul{margin:10px 0 0;padding-left:20px;display:grid;gap:6px;max-width:
     </svg>`;
   }
 
-  // ---- this week's book
-  const wk = D.weeks.length ? D.weeks[D.weeks.length - 1] : null;
-  // live marks (indicative) from api.glassbox.gripe/prices; fall back to the last daily close
-  let live = null;
-  const mark = p => { const lp = live && live.prices[p.coin + 'USDT']; return lp ? {px: lp, live: true} : {px: p.now, live: false}; };
+  // ---- live pieces (re-rendered every minute)
+  function hero(){
+    const v = live ? liveValue() : official, r = v / D.bankroll - 1;
+    return `<div class="label">${live ? 'Right now · live estimate' : 'At the last daily close'}</div>
+      <div class="big mono">${usd(v)}</div>
+      <div class="delta ${cls(r)}">${pct(r, 2)} since ${fmtDate(START)}</div>
+      <div class="s">${live ? `Updated ${esc(localTime(live.asOf * 1000))}. Refreshes every minute.` : 'Live prices loading…'}
+        Official value at the ${esc(D.status.data_through ? fmtDate(D.status.data_through) : '')} daily close: ${usd(official)}.</div>`;
+  }
+  function movers(){
+    if (!D.book.length) return '';
+    const m = D.book.map(p => ({coin: p.coin, v: pnlWeek(p)})).sort((a, b) => Math.abs(b.v) - Math.abs(a.v)).slice(0, 4);
+    const tot = D.book.reduce((s, p) => s + pnlWeek(p), 0);
+    return `<span class="label">This week so far</span> <b class="mono ${cls(tot)}">${sgn$(tot)}</b>
+      <span class="label" style="margin-left:8px">Biggest movers</span>
+      ${m.map(x => `<span class="mover"><b>${esc(x.coin)}</b> <span class="mono ${cls(x.v)}">${sgn$(x.v)}</span></span>`).join('')}`;
+  }
   function side(which){
     const rows = D.book.filter(p => p.side === which).sort((a, b) => Math.abs(b.weight) - Math.abs(a.weight));
     if (!rows.length) return '<p class="empty">None this week.</p>';
-    return `<div class="tbl"><table><thead><tr><th>Coin</th><th class="r">Paper size</th><th class="r">Entry</th><th class="r">Now</th><th class="r">Price move</th><th class="r">P&amp;L</th></tr></thead><tbody>
-      ${rows.map(p => { const m = mark(p); const mv = m.px == null ? null : m.px / p.entry - 1; const pl = mv == null ? null : mv * (which === 'long' ? 1 : -1);
-        return `<tr><td><b>${esc(p.coin)}</b></td><td class="num">${usd0(Math.abs(p.weight) * D.bankroll)}</td><td class="num">${price(p.entry)}</td>
-          <td class="num" title="${m.live ? 'Live price' : 'Last daily close (no live source for this coin)'}">${price(m.px)}${m.live || !live ? '' : '<sup>*</sup>'}</td>
-          <td class="num">${mv == null ? '–' : pct(mv)}</td><td class="num ${pl == null ? '' : cls(pl)}">${pl == null ? '–' : pct(pl)}</td></tr>`; }).join('')}
+    return `<div class="tbl"><table><thead><tr><th>Coin</th><th class="r">Size</th><th class="r hide-sm">Entry</th><th class="r hide-sm">Now</th><th class="r">Price move</th><th class="r">P&amp;L</th></tr></thead><tbody>
+      ${rows.map(p => { const m = mark(p); const mv = m.px == null ? null : m.px / p.entry - 1; const v = pnlWeek(p);
+        return `<tr><td><b>${esc(p.coin)}</b></td><td class="num">${usd0(Math.abs(p.weight) * weekBase)}</td>
+          <td class="num hide-sm">${price(p.entry)}</td>
+          <td class="num hide-sm" title="${m.live ? 'Live price' : 'Last daily close (no live source for this coin)'}">${price(m.px)}${m.live || !live ? '' : '<sup>*</sup>'}</td>
+          <td class="num">${mv == null ? '–' : pct(mv)}</td><td class="num pl ${cls(v)}">${mv == null ? '–' : sgn$(v)}</td></tr>`; }).join('')}
     </tbody></table></div>`;
   }
-  function liveLine(){
-    if (!live) return 'Prices below are from the last daily close. Live prices are loading…';
-    let pnl = 0, missing = 0;
-    for (const p of D.book) { const m = mark(p); if (!m.live) missing++; if (m.px != null) pnl += Math.abs(p.weight) * D.bankroll * (m.px / p.entry - 1) * (p.side === 'long' ? 1 : -1); }
-    const t = new Date(live.asOf * 1000).toISOString().slice(11, 16);
-    return `<b class="${cls(pnl)}">Live: ${pnl >= 0 ? '+' : '−'}${usd(Math.abs(pnl))}</b> on this week's positions since Monday's close, before costs (${t} UTC, updates every minute).
-      Indicative only: live prices come from Gate.io, MEXC and OKX futures because Binance's live feed isn't available in the US; the official account above uses Binance daily closes.${missing ? ` <sup>*</sup>${missing} coin${missing > 1 ? 's' : ''} without a live source show the last close.` : ''}`;
+  function liveNote(){
+    const missing = live ? D.book.filter(p => !mark(p).live).length : 0;
+    return `Entry is the Monday daily close (00:00 UTC). Price move and P&amp;L run from that close to ${live ? 'the live price' : 'the latest daily close'}, before costs.
+      Live prices are indicative: they come from Gate.io, MEXC and OKX futures, because Binance's live feed isn't available in the US. The official account uses Binance daily closes.
+      ${missing ? `<sup>*</sup>${missing} coin${missing > 1 ? 's' : ''} without a live source show the last close.` : ''}
+      This week's positions add up to ${usd0(gross * weekBase)}, half long and half short. That's usually less than the full account because a coin can be long in one of the rule's four rankings and short in another, and those cancel out.`;
   }
-  function renderBook(){
-    const b = document.getElementById('bookLong'); if (!b) return;
-    b.innerHTML = side('long'); document.getElementById('bookShort').innerHTML = side('short');
-    document.getElementById('liveLine').innerHTML = liveLine();
+  function renderLive(){
+    const set = (id, h) => { const e = document.getElementById(id); if (e) e.innerHTML = h; };
+    set('hero', hero()); set('movers', movers()); set('bookLong', side('long')); set('bookShort', side('short')); set('liveNote', liveNote());
   }
   async function loadLive(){
     try {
       const r = await fetch('https://api.glassbox.gripe/prices', {cache: 'no-store'});
       const j = await r.json();
-      if (j.ok) { live = j; renderBook(); }
+      if (j.ok) { live = j; renderLive(); }
     } catch (e) { /* keep showing daily closes */ }
   }
 
   const hist = D.history.slice().reverse();
   const nWeeks = D.weeks.length;
   const cps = D.review_weeks.map(n => ({n, d: addDays(START, 7 * n)}));
+  const upd = D.status.updated_utc ? localTime(utcStamp(D.status.updated_utc)) : '–';
 
   document.getElementById('lab').innerHTML = `
   <section class="intro">
     <div class="label">Momentum lab · public research log</div>
     <h1>Can a simple momentum rule beat memecoins?</h1>
-    <p>We're testing one trading rule in public, with a ${bank} paper account and no real money. Every Monday's positions are committed to our <a href="${D.repo}/commits/main/lab/positions.csv" target="_blank" rel="noopener">public GitHub repo</a> before the week plays out, so they can't be changed with hindsight. Losing weeks stay up.</p>
+    <p>We're testing one trading rule in public with a ${bank} paper account (no real money). Each week it bets on the memecoins that have been rising and against the ones that have been falling. Every week's positions are <a href="${D.repo}/commits/main/lab/positions.csv" target="_blank" rel="noopener">published to GitHub</a> before the week plays out, and losing weeks stay up.</p>
+  </section>
+
+  <section class="panel" aria-label="Paper account">
+    <div class="hero-grid">
+      <div class="hero" id="hero" aria-live="polite">${hero()}</div>
+      <div class="stats">
+        <div class="stat"><div class="label">Holding BTC instead</div><div class="v">${usd(last ? last.b : D.bankroll)}</div><div class="s ${cls(btcRet)}">${last ? pct(btcRet, 2) + ' at the daily close' : 'from the next daily close'}</div></div>
+        <div class="stat"><div class="label">Worst drop</div><div class="v">${dd < 0 ? pct(dd, 1) : '0%'}</div><div class="s">from a previous high</div></div>
+        <div class="stat"><div class="label">Weeks live</div><div class="v">${nWeeks}</div><div class="s">of ${D.review_weeks[1]} planned</div></div>
+      </div>
+    </div>
+    <div class="chart">${chart()}</div>
+    ${eq.length >= 2 ? `<div class="legend"><span><i style="background:var(--accent)"></i>Momentum rule (after costs)</span><span><i style="background:var(--btc)"></i>Buy and hold BTC</span></div>` : ''}
+    <p class="normal"><b>What's normal:</b> in the backtest, a typical day moved the account about ±1.4% and a typical week about ±4%. Half of all weeks lost money. A single day or week tells you very little, so judge it at the checkpoints below.</p>
+  </section>
+
+  <section style="display:grid;gap:12px" aria-label="This week's positions">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
+      <h2>This week's positions${wk ? ' · week of ' + fmtDate(wk) : ''}</h2>
+      ${D.book.length ? `<span class="muted" style="font-size:13px">Published ${esc(localTime(utcStamp(D.book[0].published)))} · <a href="${D.repo}/commits/main/lab/positions.csv" target="_blank" rel="noopener">see the commit</a></span>` : ''}
+    </div>
+    ${D.book.length ? `<div class="movers" id="movers" aria-live="polite">${movers()}</div>` : ''}
+    <div class="book">
+      <div class="panel"><h3><span class="side long">${term('Long', TIP.long)}</span> · bets these keep rising</h3><div id="bookLong">${side('long')}</div></div>
+      <div class="panel"><h3><span class="side short">${term('Short', TIP.short)}</span> · bets these keep falling</h3><div id="bookShort">${side('short')}</div></div>
+    </div>
+    <p class="muted" style="font-size:13px;margin:0" id="liveNote">${liveNote()}</p>
+    <dl class="glossary">
+      <div><dt>Long</dt><dd>A bet that the price rises. It makes money when the coin goes up.</dd></div>
+      <div><dt>Short</dt><dd>A bet that the price falls. It makes money when the coin goes down, and loses when it goes up.</dd></div>
+      <div><dt>Funding</dt><dd>A small fee that futures longs and shorts pay each other every few hours. It can add to or take from the result.</dd></div>
+      <div><dt>Paper account</dt><dd>Pretend money. Every trade is recorded as if it happened, with realistic costs, but nothing is really bought.</dd></div>
+    </dl>
   </section>
 
   <section aria-label="What we know so far" style="display:grid;gap:12px">
@@ -198,46 +282,19 @@ details.how ul{margin:10px 0 0;padding-left:20px;display:grid;gap:6px;max-width:
       <div class="ev"><span class="pill pass">Passed</span><h3>Six-month test on memecoins</h3>
         <p>Rule frozen first, then tested on Apr–Sep 2026 data it had never seen: <b>+30% after costs</b>, not tied to the market's direction. But six months is short: we put only about a <b>75% chance</b> on it being more than luck.</p></div>
       <div class="ev"><span class="pill fail">Failed</span><h3>Same rule on 659 other crypto coins</h3>
-        <p>Pre-registered test on 2021–2026: it <b>lost 13% in the 2022 bear market</b>. Without a few rare funding windfalls it lost 37% overall: the price signal didn't beat trading costs.</p></div>
+        <p>Pre-registered test on 2021–2026: it <b>lost 13% in the 2022 bear market</b>. Without a few rare ${term('funding', TIP.funding)} windfalls it lost 37% overall: the price signal didn't beat trading costs.</p></div>
       <div class="ev"><span class="pill note">Our expectation</span><h3>More likely luck than edge</h3>
         <p>The memecoin result may be specific to that sample. This page is how we find out: live, week by week, with nothing hidden.</p></div>
     </div>
   </section>
 
-  <section class="panel" aria-label="Paper account">
-    <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
-      <h2>Paper account</h2><span class="muted" style="font-size:13px">Started ${fmtDate(START)} with ${bank} · data through ${esc(D.status.data_through ? fmtDate(D.status.data_through) : '–')} close (UTC)</span>
-    </div>
-    <div class="stats">
-      <div class="stat"><div class="label">Value</div><div class="v">${usd(last ? last.e : D.bankroll)}</div><div class="s ${cls(ret)}">${last ? pct(ret, 2) + ' since start' : 'first result after the next daily close'}</div></div>
-      <div class="stat"><div class="label">Holding BTC instead</div><div class="v">${usd(last ? last.b : D.bankroll)}</div><div class="s ${cls(btcRet)}">${last ? pct(btcRet, 2) : '–'}</div></div>
-      <div class="stat"><div class="label">Worst drop</div><div class="v">${dd < 0 ? pct(dd, 1) : '0%'}</div><div class="s">from a previous high</div></div>
-      <div class="stat"><div class="label">Weeks live</div><div class="v">${nWeeks}</div><div class="s">of ${D.review_weeks[1]} planned</div></div>
-    </div>
-    <div class="chart">${chart()}</div>
-    <div class="legend"><span><i style="background:var(--accent)"></i>Momentum rule (after costs)</span><span><i style="background:var(--btc)"></i>Buy and hold BTC</span></div>
-  </section>
-
-  <section style="display:grid;gap:12px" aria-label="This week's positions">
-    <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
-      <h2>This week's positions${wk ? ' · week of ' + fmtDate(wk) : ''}</h2>
-      ${D.book.length ? `<span class="muted" style="font-size:13px">Published ${esc(D.book[0].published)} UTC · <a href="${D.repo}/commits/main/lab/positions.csv" target="_blank" rel="noopener">see the commit</a></span>` : ''}
-    </div>
-    ${D.book.length ? `<p class="live" id="liveLine" aria-live="polite">${liveLine()}</p>` : ''}
-    <div class="book">
-      <div class="panel"><h3><span class="side long">Long</span> · bets these keep rising</h3><div id="bookLong">${side('long')}</div></div>
-      <div class="panel"><h3><span class="side short">Short</span> · bets these keep falling</h3><div id="bookShort">${side('short')}</div></div>
-    </div>
-    <p class="muted" style="font-size:13px">Entry is the Monday daily close (00:00 UTC). Price move and P&amp;L are from that close to the live price, before costs. This week's sizes add up to ${usd0(gross * D.bankroll)}, half long and half short. It's usually less than the full ${bank} because a coin can be long in one book and short in another (strong over 30 days, weak over 14), and those cancel out.</p>
-  </section>
-
   <section class="panel" aria-label="Weekly results">
     <h2>Week by week</h2>
-    ${hist.length ? `<div class="tbl"><table><thead><tr><th>Week of</th><th class="r">Rule, after costs</th><th class="r">Trading costs</th><th class="r">Funding</th><th class="r">BTC</th></tr></thead><tbody>
+    ${hist.length ? `<div class="tbl"><table><thead><tr><th>Week of</th><th class="r">Rule, after costs</th><th class="r hide-sm">Trading costs</th><th class="r hide-sm">Funding</th><th class="r">BTC</th></tr></thead><tbody>
       ${hist.map(h => `<tr><td>${fmtDate(h.week)}${h.days < 7 ? ' <span class="muted">(so far)</span>' : ''}</td><td class="num ${cls(h.ret)}">${pct(h.ret, 2)}</td>
-        <td class="num">${pct(-h.cost, 2)}</td><td class="num">${pct(h.funding, 2)}</td><td class="num ${cls(h.btc)}">${pct(h.btc, 2)}</td></tr>`).join('')}
-    </tbody></table></div>` : '<p class="empty">The first week is in progress; results appear after each daily close.</p>'}
-    <p class="muted" style="font-size:13px">Funding is the fee that perpetual-futures longs and shorts pay each other. Binance publishes it once a month, so each month's funding is added when it appears (funding included through ${esc(D.status.funding_through ? fmtDate(D.status.funding_through) : '–')}) and recent weeks may shift slightly.</p>
+        <td class="num hide-sm">${pct(-h.cost, 2)}</td><td class="num hide-sm">${pct(h.funding, 2)}</td><td class="num ${cls(h.btc)}">${pct(h.btc, 2)}</td></tr>`).join('')}
+    </tbody></table></div>` : '<p class="empty">The first week is in progress. Official results appear after each daily close (00:00 UTC).</p>'}
+    <p class="muted" style="font-size:13px;margin:0">Official numbers use Binance daily closes. ${term('Funding', TIP.funding)} is published by Binance once a month, so each month's funding is added when it appears (included through ${esc(D.status.funding_through ? fmtDate(D.status.funding_through) : '–')}) and recent weeks may shift slightly.</p>
   </section>
 
   <section style="display:grid;gap:12px" aria-label="Checkpoints">
@@ -252,7 +309,7 @@ details.how ul{margin:10px 0 0;padding-left:20px;display:grid;gap:6px;max-width:
     <summary>Exactly how the rule works</summary>
     <ul>
       <li><b>Coins:</b> a fixed list of 53 memecoin perpetual futures on Binance, frozen with the rule on Sep 27, 2026 (<a href="${D.repo}/blob/main/lab/universe.yaml" target="_blank" rel="noopener">list</a>). Each week, only coins with 14+ days of history and a typical daily volume of at least $2 million count.</li>
-      <li><b>Signal:</b> rank those coins by their return over the last 14 days, and separately over the last 30 days. For each, go long the top 3 and short the bottom 3, and separately the top 5 and bottom 5. The four books are averaged, so a coin picked by all four gets the biggest position.</li>
+      <li><b>Signal:</b> rank those coins by their return over the last 14 days, and separately over the last 30 days. For each, go long the top 3 and short the bottom 3, and separately the top 5 and bottom 5. The four rankings are averaged, so a coin picked by all four gets the biggest position.</li>
       <li><b>Timing:</b> the coins are re-picked at each Monday daily close (00:00 UTC Tuesday), and only the difference from last week is traded. In between, each position is brought back to its target share of the account at every daily close (a winner that has grown is trimmed, for example), and a coin that stops qualifying mid-week is closed. Every trade, weekly or daily, pays the costs below.</li>
       <li><b>Costs:</b> 0.10% fee plus 0.15% slippage on every dollar traded, plus actual funding. No leverage beyond the positions shown.</li>
       <li><b>Data:</b> Binance's free public archive, <a href="https://data.binance.vision" target="_blank" rel="noopener">data.binance.vision</a>. <a href="${D.repo}/blob/main/lab/m1.py" target="_blank" rel="noopener">The code</a> and every daily number (<a href="${D.repo}/blob/main/lab/equity.csv" target="_blank" rel="noopener">equity.csv</a>) are public.</li>
@@ -262,7 +319,7 @@ details.how ul{margin:10px 0 0;padding-left:20px;display:grid;gap:6px;max-width:
 
   <footer class="foot">
     <div><b>Not financial advice, and not a signals service.</b> This is a research log with no real money. Nothing here is connected to the Glass Box coin. Perpetual futures are leveraged derivatives that can lose money fast, and many countries restrict them for retail traders.</div>
-    <div>Data last updated ${esc(D.status.updated_utc || '–')} UTC. We check for new daily prices twice a day.</div>
+    <div>Official data last updated ${esc(upd)}. We check for new daily prices twice a day; live prices refresh every minute.</div>
   </footer>`;
 
   if (D.book.length) { loadLive(); setInterval(loadLive, 60000); }
