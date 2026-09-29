@@ -201,7 +201,7 @@ details.how ul{margin:10px 0 0;padding-left:20px;display:grid;gap:6px;max-width:
       <div class="panel"><h3><span class="side long">Long</span> · bets these keep rising</h3>${side('long')}</div>
       <div class="panel"><h3><span class="side short">Short</span> · bets these keep falling</h3>${side('short')}</div>
     </div>
-    <p class="muted" style="font-size:13px">Entry is the Monday daily close (00:00 UTC). Price move and P&amp;L are from that close to the latest one, before costs. This week's sizes add up to ${usd0(gross * D.bankroll)} (half long, half short). Each coin's size is capped, so the rule rarely uses the whole ${bank}.</p>
+    <p class="muted" style="font-size:13px">Entry is the Monday daily close (00:00 UTC). Price move and P&amp;L are from that close to the latest one, before costs. This week's sizes add up to ${usd0(gross * D.bankroll)}, half long and half short. It's usually less than the full ${bank} because a coin can be long in one book and short in another (strong over 30 days, weak over 14), and those cancel out.</p>
   </section>
 
   <section class="panel" aria-label="Weekly results">
