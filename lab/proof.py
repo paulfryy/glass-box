@@ -129,10 +129,11 @@ def main():
                                  if status[week]["bitcoin_block"] else "waiting for a Bitcoin block"))
 
     with open(idx_path, "w", encoding="utf-8", newline="\n") as f:
-        w = csv.DictWriter(f, fieldnames=["week", "sha256", "stamped_utc", "run_url"])
+        w = csv.DictWriter(f, fieldnames=["week", "sha256", "stamped_utc", "run_url"], lineterminator="\n")
         w.writeheader()
         w.writerows(index)
-    json.dump(status, open(st_path, "w"), indent=1, sort_keys=True)
+    with open(st_path, "w", newline="\n") as f:          # LF everywhere, so Windows and Linux runs agree
+        json.dump(status, f, indent=1, sort_keys=True)
 
 
 if __name__ == "__main__":

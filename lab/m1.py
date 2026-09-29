@@ -251,7 +251,7 @@ def main():
     st = {"data_through": f"{C.index.max():%Y-%m-%d}", "funding_through": f"{F.index.max():%Y-%m-%d}"}
     same = all(old.get(k) == v for k, v in st.items()) and "updated_utc" in old
     st["updated_utc"] = old["updated_utc"] if same else stamp
-    open(sp, "w").write("".join(f"{k}={v}\n" for k, v in st.items()))
+    open(sp, "w", newline="\n").write("".join(f"{k}={v}\n" for k, v in st.items()))
     print(f"paper equity ${eq['equity'].iloc[-1] if len(eq) else BANKROLL:,.2f} after {len(eq)} day(s)")
 
 
