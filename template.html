@@ -93,23 +93,64 @@ td.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-num
 @media (max-width:760px){.two{grid-template-columns:1fr}.head{grid-template-columns:1fr}.coinimg{width:80px;height:80px}
   .flag{grid-template-columns:28px 1fr}.flag .d{grid-column:2;text-align:left}.att{grid-template-columns:auto 1fr}.att .st{grid-column:2;text-align:left}}
 
-/* tabs + checker */
-.tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);padding-bottom:0}
+[hidden]{display:none!important}   /* .wrap{display:grid} would otherwise override the hidden attribute */
+
+/* tabs */
+.tabs{display:flex;gap:6px;border-bottom:1px solid var(--line)}
 .tabs a{font-family:var(--display);font-weight:600;font-size:15px;text-decoration:none;color:var(--muted);padding:10px 14px;border-bottom:3px solid transparent;margin-bottom:-1px}
 .tabs a[aria-current="page"]{color:var(--ink);border-bottom-color:var(--accent)}
-.checkform{display:flex;flex-wrap:wrap;gap:10px}
-.checkform input{flex:1 1 320px;min-width:0;font-family:var(--mono);font-size:14px;padding:11px 12px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
-.checkform input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-.checkform button{font-family:var(--display);font-weight:600;font-size:15px;padding:10px 20px;border-radius:8px;border:0;background:var(--accent);color:#fff;cursor:pointer}
-.checkform button:disabled{opacity:.6;cursor:wait}
-.verdict{border-radius:12px;padding:16px 18px;display:grid;gap:4px;border:1px solid var(--line);background:var(--surface)}
-.verdict .big{font-family:var(--display);font-size:24px;font-weight:700}
-.verdict.clean{border-color:var(--pass);background:var(--pass-soft)}.verdict.clean .big{color:var(--pass)}
-.verdict.mixed,.verdict.caution{border-color:var(--warn);background:var(--warn-soft)}.verdict.mixed .big,.verdict.caution .big{color:var(--warn)}
-.verdict.danger{border-color:var(--fail);background:var(--fail-soft)}.verdict.danger .big{color:var(--fail)}
-.why{font-size:12.5px;color:var(--muted);margin-top:2px}
-.sev{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-left:6px}
+
+/* scanner (Check any coin) */
+.scan-head{display:grid;gap:8px}
+.scan-head p{margin:0;color:var(--muted);max-width:64ch}
+.searchbar{display:flex;border:2px solid var(--ink);border-radius:10px;overflow:hidden;background:var(--surface);max-width:760px}
+.searchbar:focus-within{border-color:var(--accent)}
+.searchbar input{flex:1;min-width:0;border:0;background:transparent;color:var(--ink);font-family:var(--mono);font-size:14.5px;padding:14px}
+.searchbar input:focus{outline:none}
+.searchbar button{border:0;background:var(--ink);color:var(--bg);font-family:var(--display);font-weight:600;font-size:16px;padding:0 22px;cursor:pointer;white-space:nowrap}
+.searchbar button:disabled{opacity:.6;cursor:wait}
+.chips{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px;color:var(--muted)}
+.chips button{font:inherit;font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:4px 11px;cursor:pointer}
+.chips button:hover{border-color:var(--accent)}
+.chips .k{font-family:var(--mono);color:var(--muted)}
+.scanning{display:grid;gap:10px;max-width:760px}
+.scanbar{height:6px;border-radius:3px;background:var(--bar);overflow:hidden}
+.scanbar i{display:block;height:100%;width:35%;background:var(--accent);border-radius:3px}
+@media (prefers-reduced-motion:no-preference){.scanbar i{animation:sweep 1.1s ease-in-out infinite alternate}}
+@keyframes sweep{from{transform:translateX(-10%)}to{transform:translateX(200%)}}
+
+.report{border:1px solid var(--line);border-radius:14px;background:var(--surface);overflow:hidden}
+.report-top{display:grid;grid-template-columns:minmax(220px,300px) 1fr}
+.verdict-box{padding:20px;display:grid;gap:10px;align-content:start;border-right:1px solid var(--line)}
+.verdict-box .word{font-family:var(--display);font-size:30px;font-weight:700;line-height:1}
+.v-clean .word{color:var(--pass)} .v-mixed .word,.v-caution .word{color:var(--warn)} .v-danger .word{color:var(--fail)}
+.v-clean{background:var(--pass-soft)} .v-mixed,.v-caution{background:var(--warn-soft)} .v-danger{background:var(--fail-soft)}
+.meter{display:grid;grid-template-columns:repeat(9,1fr);gap:3px}
+.meter span{height:10px;border-radius:2px;background:var(--pass)}
+.meter span.m{background:var(--warn)} .meter span.h{background:var(--fail)}
+.meter-key{font-size:12px;color:var(--muted)}
+.coin-box{padding:20px;display:grid;gap:12px;align-content:start;min-width:0}
+.coin-box h2{font-size:24px}
+.coin-box .mint{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.coin-box .mint code{font-family:var(--mono);font-size:12px;color:var(--muted);word-break:break-all}
+.minibtn{font:inherit;font-size:12px;border:1px solid var(--line);background:transparent;color:var(--accent);border-radius:6px;padding:3px 9px;cursor:pointer}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
+.facts div{display:grid;gap:2px}
+.facts b{font-family:var(--mono);font-weight:500;font-size:15px;font-variant-numeric:tabular-nums}
+.mini-progress{height:6px;border-radius:3px;background:var(--bar);overflow:hidden;margin-top:4px}
+.mini-progress i{display:block;height:100%;background:var(--accent)}
+.report-body{border-top:1px solid var(--line);padding:18px 20px;display:grid;gap:16px}
+.issue{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;padding:12px 0;border-bottom:1px dashed var(--line)}
+.issue:last-child{border-bottom:0}
+.pill{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:5px;align-self:start;margin-top:2px}
+.pill.high,.pill.critical{background:var(--fail-soft);color:var(--fail)} .pill.medium{background:var(--warn-soft);color:var(--warn)}
+.issue .t{font-weight:600} .issue .w{grid-column:2;color:var(--muted);font-size:13.5px} .issue .dd{grid-column:2;font-family:var(--mono);font-size:12.5px}
+.oks{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:6px 18px}
+.oks div{font-size:13.5px;color:var(--muted)} .oks div::before{content:"✓ ";color:var(--pass);font-weight:700}
+details.holders summary{cursor:pointer;font-family:var(--display);font-weight:600}
+.fine{font-size:12.5px;color:var(--muted)}
 .err{color:var(--fail)}
+@media (max-width:760px){.report-top{grid-template-columns:1fr}.verdict-box{border-right:0;border-bottom:1px solid var(--line)}}
 
 @media (prefers-reduced-motion:no-preference){.pfill{transition:width .6s ease}}
 </style>
@@ -122,15 +163,23 @@ td.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-num
 </div>
 <div class="wrap" id="app"></div>
 <div class="wrap" id="checker" hidden>
-  <section style="display:grid;gap:10px">
+  <section class="scan-head">
+    <div class="label">Scanner</div>
     <h1>Check any pump.fun coin</h1>
-    <p style="margin:0;color:var(--muted);max-width:66ch">Paste a coin's address to see the same red-flag checks this site runs on its own coin, read live from the Solana blockchain. These are warning signs, not guarantees.</p>
-    <form class="checkform" id="checkForm" autocomplete="off">
-      <label for="mintInput" class="label" style="position:absolute;left:-9999px">Coin address</label>
-      <input id="mintInput" name="mint" placeholder="e.g. 6TYhdKYd9bi4jueYJ1TswkNx28ZjqdjKBkH2mmFcpump" spellcheck="false" required>
-      <button id="checkBtn" type="submit">Check coin</button>
-    </form>
+    <p>Paste a coin's address. We read it live from the Solana blockchain and run the same nine checks this site runs on its own coin. Warning signs, not guarantees.</p>
   </section>
+  <form class="searchbar" id="checkForm" autocomplete="off">
+    <label for="mintInput" style="position:absolute;left:-9999px">Coin address</label>
+    <input id="mintInput" name="mint" placeholder="Paste a coin address, e.g. 6TYh…pump" spellcheck="false" required>
+    <button id="checkBtn" type="submit">Scan</button>
+  </form>
+  <div class="chips" id="examples">
+    <span>Try:</span>
+    <button type="button" data-mint="6TYhdKYd9bi4jueYJ1TswkNx28ZjqdjKBkH2mmFcpump">Chad Penguin <span class="k">clean</span></button>
+    <button type="button" data-mint="D73WxcQ9H7fbvr6tQTmpeMUgD7FTKExMTPkfhuifworm">worm <span class="k">bundled launch</span></button>
+    <button type="button" data-mint="3cTzP93QSkBRYt796Ufn3VWPaafE5V9DpXtDVGHMpump">Elon Coin <span class="k">self-graduated</span></button>
+  </div>
+  <div class="chips" id="recent" hidden></div>
   <div id="checkOut" aria-live="polite"></div>
 </div>
 
@@ -239,40 +288,125 @@ td.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-num
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? '').replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
   const short = a => a ? a.slice(0,4) + '…' + a.slice(-4) : '';
-  const labels = {clean:'No red flags found', mixed:'Some warning signs', caution:'Caution', danger:'High risk'};
+  const WORD = {clean:'No red flags', mixed:'Some warning signs', caution:'Caution', danger:'High risk'};
+  // headline shown when a check FAILS (the check names themselves describe the passing state)
+  const FAIL_TITLE = [
+    [/^Mint authority/, 'Mint authority is still active'],
+    [/^Freeze authority/, 'Freeze authority is still active'],
+    [/^Not in mayhem/, 'Coin is in mayhem mode'],
+    [/^Creator's launch buy/, 'Creator bought a large share at launch'],
+    [/^Creator still holds/, 'Creator has sold their launch buy'],
+    [/^Launch buyers took/, 'Launch buyers grabbed a large share'],
+    [/^Launch snipers still hold/, 'Launch snipers still hold a large share'],
+    [/^Top-10 wallets/, 'A few wallets own a large share'],
+    [/^No instant/, 'Graduated instantly, likely self-funded'],
+  ];
+  const failTitle = c => (FAIL_TITLE.find(([re]) => re.test(c)) || [null, c])[1];
+  const age = t => { const s = Date.now()/1000 - t; return s < 3600 ? Math.round(s/60) + ' min' : s < 172800 ? (s/3600).toFixed(1) + ' h' : Math.round(s/86400) + ' days'; };
+  let busy = false;
+
   function show(tab){
     const check = tab === 'check';
     $('app').hidden = check; $('checker').hidden = !check;
-    $('tabCoin').toggleAttribute('aria-current', !check); $('tabCheck').toggleAttribute('aria-current', check);
-    if (check) $('tabCheck').setAttribute('aria-current','page'); else $('tabCoin').setAttribute('aria-current','page');
+    $('tabCoin').removeAttribute('aria-current'); $('tabCheck').removeAttribute('aria-current');
+    (check ? $('tabCheck') : $('tabCoin')).setAttribute('aria-current', 'page');
   }
   window.addEventListener('hashchange', () => show(location.hash.slice(1)));
-  show(location.hash.slice(1));
-  $('checkForm').addEventListener('submit', async e => {
-    e.preventDefault();
-    const mint = $('mintInput').value.trim(), out = $('checkOut'), btn = $('checkBtn');
-    btn.disabled = true; btn.textContent = 'Checking…'; out.innerHTML = '<p class="why">Reading the blockchain…</p>';
+
+  function recent(add){
+    let list = [];
+    try { list = JSON.parse(localStorage.getItem('gb_recent') || '[]'); } catch (e) {}
+    if (add) {
+      list = [add, ...list.filter(x => x.mint !== add.mint)].slice(0, 5);
+      try { localStorage.setItem('gb_recent', JSON.stringify(list)); } catch (e) {}
+    }
+    const box = $('recent');
+    box.hidden = !list.length;
+    box.innerHTML = list.length ? '<span>Recent:</span>' + list.map(x =>
+      `<button type="button" data-mint="${esc(x.mint)}">${esc(x.name)} <span class="k">${esc(WORD[x.verdict] || '')}</span></button>`).join('') : '';
+  }
+
+  function report(d){
+    const order = {critical: 0, high: 1, medium: 2};
+    const fails = d.flags.filter(f => !f.ok).sort((a, b) => order[a.severity] - order[b.severity]);
+    const oks = d.flags.filter(f => f.ok);
+    const seg = d.flags.map(f => `<span class="${f.ok ? '' : (f.severity === 'medium' ? 'm' : 'h')}" title="${esc(f.check)}"></span>`).join('');
+    const share = `${location.origin}${location.pathname}?mint=${encodeURIComponent(d.mint)}#check`;
+    const failHtml = fails.length
+      ? `<section><h2>What looks wrong</h2>${fails.map(f => `
+          <div class="issue"><span class="pill ${f.severity}">${esc(f.severity)}</span><span class="t">${esc(failTitle(f.check))}</span>
+            <span class="w">${esc(f.why)}</span><span class="dd">${esc(f.detail)}</span></div>`).join('')}</section>`
+      : `<section><h2>Nothing on our list</h2><p class="fine" style="margin:4px 0 0">All nine checks passed. That rules out the obvious risks we look for; it doesn't make a coin a good bet.</p></section>`;
+    const okHtml = oks.length
+      ? `<section><h2 style="font-size:16px;margin-bottom:8px">Passed</h2><div class="oks">${oks.map(f => `<div>${esc(f.check)}</div>`).join('')}</div></section>` : '';
+    const rows = d.topHolders.map(h => `<tr><td class="mono">${h.wallet ? `<a href="https://solscan.io/account/${esc(h.wallet)}" target="_blank" rel="noopener">${short(h.wallet)}</a>` : '–'}</td>
+      <td>${h.tag ? `<span class="tag ${h.tag === 'creator' ? 'creator' : 'sniper'}">${esc(h.tag)}</span>` : ''}</td><td class="num">${(h.pct * 100).toFixed(3)}%</td></tr>`).join('');
+    return `
+    <article class="report">
+      <div class="report-top">
+        <div class="verdict-box v-${d.verdict}">
+          <div class="label">Verdict</div>
+          <div class="word">${WORD[d.verdict]}</div>
+          <div class="meter" role="img" aria-label="${d.failCount} of ${d.flags.length} checks failed">${seg}</div>
+          <div class="meter-key">${d.failCount} of ${d.flags.length} checks failed</div>
+        </div>
+        <div class="coin-box">
+          <div><h2>${esc(d.name)} <span class="mono" style="font-size:.6em;color:var(--muted)">$${esc(d.symbol)}</span></h2>
+            <div class="mint"><code>${esc(d.mint)}</code><button class="minibtn" type="button" data-copy="${esc(share)}">Copy share link</button></div></div>
+          <div class="facts">
+            <div><span class="label">Age</span><b>${d.created ? age(d.created) : '–'}</b></div>
+            <div><span class="label">Market cap</span><b>${d.mcapSol.toFixed(1)} SOL</b></div>
+            <div><span class="label">Fees go to</span><b>${esc(d.rewardMode)}</b></div>
+            <div><span class="label">${d.graduated ? 'Graduated' : 'To graduation'}</span><b>${(d.curveProgress * 100).toFixed(1)}%</b>
+              <div class="mini-progress"><i style="width:${Math.max(d.curveProgress * 100, 1)}%"></i></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="report-body">
+        ${failHtml}
+        ${okHtml}
+        <details class="holders"><summary>Top holders</summary>
+          <div class="tbl" style="margin-top:8px"><table><thead><tr><th>Wallet</th><th></th><th style="text-align:right">Supply</th></tr></thead><tbody>${rows}</tbody></table></div></details>
+        <p class="fine" style="margin:0">${esc(d.note)} Verify it yourself: <a href="https://pump.fun/coin/${esc(d.mint)}" target="_blank" rel="noopener">pump.fun</a> · <a href="https://solscan.io/token/${esc(d.mint)}" target="_blank" rel="noopener">Solscan</a>. ${d.cached ? 'Result from the last 5 minutes.' : 'Checked just now.'}</p>
+      </div>
+    </article>`;
+  }
+
+  async function run(mint){
+    if (busy) return;
+    busy = true;
+    const out = $('checkOut'), btn = $('checkBtn');
+    $('mintInput').value = mint;
+    btn.disabled = true; btn.textContent = 'Scanning…';
+    out.innerHTML = '<div class="scanning"><div class="scanbar"><i></i></div><span class="fine">Reading the blockchain: creation, launch buyers, holders, authorities…</span></div>';
     try {
-      const r = await fetch(API + encodeURIComponent(mint)); const d = await r.json();
+      const r = await fetch(API + encodeURIComponent(mint));
+      const d = await r.json();
       if (!d.ok) { out.innerHTML = `<p class="err">${esc(d.error || 'Something went wrong.')}</p>`; return; }
-      out.innerHTML = `
-      <div style="display:grid;gap:16px">
-        <div class="verdict ${d.verdict}"><span class="label">Verdict</span><span class="big">${labels[d.verdict]}</span>
-          <span>${esc(d.name)} <span class="mono">$${esc(d.symbol)}</span> · ${d.failCount} of ${d.flags.length} checks failed · ${d.graduated ? 'graduated' : (d.curveProgress*100).toFixed(1) + '% of the way to graduation'} · market cap ${d.mcapSol.toFixed(1)} SOL</span>
-          <span class="why">${esc(d.note)}</span></div>
-        <div class="flags">${d.flags.map(f => `
-          <div class="flag ${f.ok ? 'ok' : 'bad'}"><span class="dot" aria-hidden="true">${f.ok ? '✓' : '!'}</span>
-            <span>${esc(f.check)}<span class="sev">${esc(f.severity)}</span>${f.ok ? '' : `<div class="why">${esc(f.why)}</div>`}</span>
-            <span class="d">${esc(f.detail)}</span></div>`).join('')}</div>
-        <div class="panel"><h2>Top holders</h2><div class="tbl"><table><thead><tr><th>Wallet</th><th></th><th style="text-align:right">Supply</th></tr></thead><tbody>
-          ${d.topHolders.map(h => `<tr><td class="mono">${h.wallet ? `<a href="https://solscan.io/account/${esc(h.wallet)}" target="_blank" rel="noopener">${short(h.wallet)}</a>` : '–'}</td>
-            <td>${h.tag ? `<span class="tag ${h.tag === 'creator' ? 'creator' : 'sniper'}">${esc(h.tag)}</span>` : ''}</td><td class="num">${(h.pct*100).toFixed(3)}%</td></tr>`).join('')}
-          </tbody></table></div></div>
-        <p class="why">Verify: <a href="https://pump.fun/coin/${esc(d.mint)}" target="_blank" rel="noopener">pump.fun page</a> · <a href="https://solscan.io/token/${esc(d.mint)}" target="_blank" rel="noopener">Solscan</a>${d.cached ? ' · result cached for up to 5 minutes' : ''}</p>
-      </div>`;
+      out.innerHTML = report(d);
+      recent({mint: d.mint, name: d.name, verdict: d.verdict});
+      try { history.replaceState(null, '', `?mint=${encodeURIComponent(d.mint)}#check`); } catch (e) {}
     } catch (err) {
-      out.innerHTML = '<p class="err">Couldn\'t reach the checker. Check your connection and try again.</p>';
-    } finally { btn.disabled = false; btn.textContent = 'Check coin'; }
+      out.innerHTML = "<p class=\"err\">Couldn't reach the scanner. Check your connection and try again.</p>";
+    } finally {
+      busy = false; btn.disabled = false; btn.textContent = 'Scan';
+    }
+  }
+
+  $('checkForm').addEventListener('submit', e => { e.preventDefault(); run($('mintInput').value.trim()); });
+  document.addEventListener('click', e => {
+    const b = e.target.closest('button[data-mint]');
+    if (b) { run(b.dataset.mint); return; }
+    const c = e.target.closest('button[data-copy]');
+    if (c) {
+      const done = () => { c.textContent = 'Link copied'; setTimeout(() => { c.textContent = 'Copy share link'; }, 1500); };
+      try { navigator.clipboard.writeText(c.dataset.copy).then(done, () => {}); } catch (err) {}
+    }
   });
+
+  recent();
+  const q = new URLSearchParams(location.search).get('mint');
+  if (q) { show('check'); run(q); } else { show(location.hash.slice(1)); }
 })();
 </script>
+
