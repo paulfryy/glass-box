@@ -1,5 +1,5 @@
 # Which coin the page shows. To switch coins: change `mint` (and `image`), commit, done.
-mint: 6TYhdKYd9bi4jueYJ1TswkNx28ZjqdjKBkH2mmFcpump
-image: assets/chadp.png
+mint: 7qEZQvojcBEyWjuzpHVATBA3yoBNpEvx42ELLpuWpump
+image: assets/glass.png
 lookback_days: 14          # how far back to look for the coin's creation
 max_pages_per_run: 30      # cap: 30 pages x 10 Helius credits = 300 credits per refresh at most
