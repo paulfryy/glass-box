@@ -58,10 +58,20 @@ def main():
     history = [{"week": k, "ret": v["net"] - 1, "cost": v["cost"], "funding": v["funding"], "days": v["days"],
                 "btc": v["btc_end"] / v["btc_start"] - 1} for k, v in sorted(wk.items())]
 
+    # tamper-evidence: per-week SHA-256, stamp time, Actions run, Bitcoin block (lab/proof.py)
+    proof_status = {}
+    sp = os.path.join(HERE, "proofs", "status.json")
+    if os.path.exists(sp):
+        proof_status = json.load(open(sp))
+    proofs = [{**r, "bitcoin_block": (proof_status.get(r["week"]) or {}).get("bitcoin_block")}
+              for r in rows(os.path.join("proofs", "index.csv"))]
+    band_path = os.path.join(HERE, "band.json")
+    band = json.load(open(band_path)) if os.path.exists(band_path) else None
+
     data = {
         "status": st, "bankroll": BANKROLL, "weeks": weeks, "book": book, "history": history,
         "equity": [{"d": r["date"], "e": float(r["equity"]), "b": float(r["btc_equity"])} for r in eq],
-        "review_weeks": REVIEW_WEEKS, "repo": REPO,
+        "review_weeks": REVIEW_WEEKS, "repo": REPO, "proofs": proofs, "band": band,
     }
     tpl = open(os.path.join(HERE, "template.html"), encoding="utf-8").read()
     page = "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">" \

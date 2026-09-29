@@ -87,6 +87,10 @@ td.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .movers > b{font-size:17px}
 .mover{font-size:13.5px;white-space:nowrap}
 td.pl{font-weight:600}
+.legend i.swatch{width:14px;height:10px;border-radius:2px;background:var(--accent);opacity:.25}
+.track{margin:0;font-size:14px}
+.stale{background:var(--fail-soft);color:var(--ink);border:1px solid var(--fail);border-radius:10px;padding:12px 16px;font-size:14px}
+.stale b{color:var(--fail)}
 a.coin{font-weight:600;color:var(--ink);text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
 a.coin:hover{color:var(--accent);text-decoration-color:currentColor}
 .term{border-bottom:1px dotted currentColor;cursor:help}
@@ -166,27 +170,57 @@ details.how ul{margin:10px 0 0;padding-left:20px;display:grid;gap:6px;max-width:
     return s + (m.px == null || p.now == null ? 0 : p.weight * (m.px / p.now - 1)); }, 0));
 
   // ---- chart
+  // expected range: bootstrap of the rule's Apr–Sep 2026 out-of-sample days (lab/band.json)
+  const B = D.band, nDays = eq.length;
+  const bandAt = (k, i) => i === 0 ? 0 : B[k][Math.min(i, B.days) - 1];
   function chart(){
-    if (eq.length < 2) return `<p class="empty">The chart starts after the second daily close. Until then, the live number above is the one to watch.</p>`;
-    const pts = [{d: START, e: D.bankroll, b: D.bankroll}, ...eq];
-    const W = 800, H = 240, pl = 56, pr = 12, pt = 12, pb = 28;
-    const vals = pts.flatMap(p => [p.e, p.b]);
+    const end = Math.min(B ? B.days : 182, Math.max(28, Math.ceil((nDays + 7) / 7) * 7));   // show at least 4 weeks ahead
+    const pts = [{i: 0, e: D.bankroll, b: D.bankroll}, ...eq.map((r, k) => ({i: k + 1, e: r.e, b: r.b}))];
+    const W = 800, H = 260, pl = 60, pr = 12, pt = 12, pb = 28;
+    const idx = [...Array(end + 1).keys()];
+    const vals = pts.flatMap(p => [p.e, p.b]).concat(B ? idx.flatMap(i => [D.bankroll * (1 + bandAt('p5', i)), D.bankroll * (1 + bandAt('p95', i))]) : []);
     let lo = Math.min(...vals, D.bankroll), hi = Math.max(...vals, D.bankroll);
-    const pad = (hi - lo) * 0.08 || 20; lo -= pad; hi += pad;
-    const x = i => pl + i * (W - pl - pr) / (pts.length - 1);
+    const pad = (hi - lo) * 0.06 || 20; lo -= pad; hi += pad;
+    const x = i => pl + i * (W - pl - pr) / end;
     const y = v => pt + (hi - v) * (H - pt - pb) / (hi - lo);
-    const line = k => pts.map((p, i) => `${x(i).toFixed(1)},${y(p[k]).toFixed(1)}`).join(' ');
+    const P = (i, v) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`;
+    const area = (a, b) => idx.map(i => P(i, D.bankroll * (1 + bandAt(b, i)))).join(' ') + ' ' + idx.slice().reverse().map(i => P(i, D.bankroll * (1 + bandAt(a, i)))).join(' ');
+    const line = k => pts.map(p => P(p.i, p[k])).join(' ');
     const ticks = [lo + pad, (lo + hi) / 2, hi - pad];
-    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Paper account value compared with holding BTC, since ${fmtDate(START)}">
-      ${ticks.map(t => `<line x1="${pl}" x2="${W - pr}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)"/>
+    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Paper account value since ${fmtDate(START)}, with the range expected from the rule's out-of-sample test, and holding BTC">
+      ${B ? `<polygon points="${area('p5', 'p95')}" fill="var(--accent)" opacity=".08"/>
+        <polygon points="${area('p25', 'p75')}" fill="var(--accent)" opacity=".14"/>
+        <polyline points="${idx.map(i => P(i, D.bankroll * (1 + bandAt('p50', i)))).join(' ')}" fill="none" stroke="var(--accent)" stroke-width="1" stroke-dasharray="2 4" opacity=".7"/>` : ''}
+      ${ticks.map(t => `<line x1="${pl}" x2="${W - pr}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)" opacity=".7"/>
         <text x="${pl - 8}" y="${y(t) + 4}" text-anchor="end" font-size="11" fill="var(--muted)" font-family="var(--mono)">${usd0(t)}</text>`).join('')}
       <line x1="${pl}" x2="${W - pr}" y1="${y(D.bankroll)}" y2="${y(D.bankroll)}" stroke="var(--muted)" stroke-dasharray="3 4" opacity=".6"/>
-      <polyline points="${line('b')}" fill="none" stroke="var(--btc)" stroke-width="2"/>
-      <polyline points="${line('e')}" fill="none" stroke="var(--accent)" stroke-width="2.5"/>
-      <text x="${pl}" y="${H - 8}" font-size="11" fill="var(--muted)">${fmtDate(pts[0].d)}</text>
-      <text x="${W - pr}" y="${H - 8}" font-size="11" fill="var(--muted)" text-anchor="end">${fmtDate(pts[pts.length - 1].d)}</text>
+      ${pts.length > 1 ? `<polyline points="${line('b')}" fill="none" stroke="var(--btc)" stroke-width="2"/>
+        <polyline points="${line('e')}" fill="none" stroke="var(--accent)" stroke-width="2.5"/>` : ''}
+      <circle cx="${x(pts[pts.length - 1].i)}" cy="${y(pts[pts.length - 1].e)}" r="4" fill="var(--accent)"/>
+      <text x="${pl}" y="${H - 8}" font-size="11" fill="var(--muted)">${fmtDate(START)}</text>
+      <text x="${W - pr}" y="${H - 8}" font-size="11" fill="var(--muted)" text-anchor="end">${fmtDate(addDays(START, end))}</text>
     </svg>`;
   }
+  function track(){
+    if (!B) return '';
+    if (!nDays) return 'Once daily results start, this line says whether the account is inside the range its test suggests.';
+    const r = official / D.bankroll - 1, q = k => bandAt(k, nDays);
+    const where = r < q('p5') ? 'below the expected range: worse than 95% of simulated paths'
+      : r < q('p25') ? 'in the lower part of the expected range'
+      : r <= q('p75') ? 'in the middle of the expected range'
+      : r <= q('p95') ? 'in the upper part of the expected range'
+      : 'above the expected range: better than 95% of simulated paths';
+    return `After ${nDays} day${nDays > 1 ? 's' : ''}, the account (${pct(r, 1)}) is <b>${where}</b>.`;
+  }
+  // stale-data warning: the latest complete daily candle should be yesterday's (UTC), allow a day's slack
+  const todayUTC = new Date().toISOString().slice(0, 10);
+  const behindDays = D.status.data_through ? Math.round((Date.parse(todayUTC) - Date.parse(D.status.data_through)) / 86400000) - 1 : 0;
+  // tamper-evidence for this week (lab/proof.py)
+  const raw = f => `https://raw.githubusercontent.com/paulfryy/glass-box/main/lab/proofs/${f}`;
+  const proofOf = w => (D.proofs || []).find(p => p.week === w);
+  const proofBadge = w => { const p = proofOf(w); if (!p) return 'Bitcoin timestamp: being created';
+    return p.bitcoin_block ? `<a href="${raw(w + '.csv.ots')}">Anchored in Bitcoin block ${Number(p.bitcoin_block).toLocaleString('en-US')}</a> ✓`
+      : 'Bitcoin timestamp pending (usually a few hours)'; };
 
   // ---- live pieces (re-rendered every minute)
   function hero(){
@@ -241,6 +275,7 @@ details.how ul{margin:10px 0 0;padding-left:20px;display:grid;gap:6px;max-width:
   const upd = D.status.updated_utc ? localTime(utcStamp(D.status.updated_utc)) : '–';
 
   document.getElementById('lab').innerHTML = `
+  ${behindDays >= 2 ? `<div class="stale" role="status"><b>Official data is delayed.</b> The latest daily close we have is ${fmtDate(D.status.data_through)}, ${behindDays} days behind. The daily update may have failed; it will catch up automatically once it runs. Live prices below are unaffected.</div>` : ''}
   <section class="intro">
     <div class="label">Momentum lab · public research log</div>
     <h1>Can a simple momentum rule beat memecoins?</h1>
@@ -257,14 +292,16 @@ details.how ul{margin:10px 0 0;padding-left:20px;display:grid;gap:6px;max-width:
       </div>
     </div>
     <div class="chart">${chart()}</div>
-    ${eq.length >= 2 ? `<div class="legend"><span><i style="background:var(--accent)"></i>Momentum rule (after costs)</span><span><i style="background:var(--btc)"></i>Buy and hold BTC</span></div>` : ''}
-    <p class="normal"><b>What's normal:</b> in the backtest, a typical day moved the account about ±1.4% and a typical week about ±4%. Half of all weeks lost money. A single day or week tells you very little, so judge it at the checkpoints below.</p>
+    <div class="legend"><span><i style="background:var(--accent)"></i>Momentum rule (after costs)</span><span><i style="background:var(--btc)"></i>Buy and hold BTC</span>
+      ${B ? `<span><i class="swatch"></i>Expected range if it performs like its Apr–Sep 2026 test (middle half darker, 90% lighter)</span>` : ''}</div>
+    ${B ? `<p class="track">${track()}</p>` : ''}
+    <p class="normal"><b>What's normal:</b> in the backtest, a typical day moved the account about ±1.4% and a typical week about ±4%. Half of all weeks lost money. Even if the rule is as good as its test, the shaded range after 26 weeks runs from about −36% to +129%, and roughly 3 in 10 simulated paths are still down. A single day or week tells you very little, so judge it at the checkpoints below.</p>
   </section>
 
   <section style="display:grid;gap:12px" aria-label="This week's positions">
     <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
       <h2>This week's positions${wk ? ' · week of ' + fmtDate(wk) : ''}</h2>
-      ${D.book.length ? `<span class="muted" style="font-size:13px">Published ${esc(localTime(utcStamp(D.book[0].published)))} · <a href="${D.repo}/commits/main/lab/positions.csv" target="_blank" rel="noopener">see the commit</a></span>` : ''}
+      ${D.book.length ? `<span class="muted" style="font-size:13px">Published ${esc(localTime(utcStamp(D.book[0].published)))} · ${proofBadge(wk)} · <a href="#proof">how to check</a></span>` : ''}
     </div>
     ${D.book.length ? `<div class="movers" id="movers" aria-live="polite">${movers()}</div>` : ''}
     <div class="book">
@@ -308,6 +345,18 @@ details.how ul{margin:10px 0 0;padding-left:20px;display:grid;gap:6px;max-width:
       <div class="cp"><span class="when">Week ${cps[1].n} · ${fmtDate(cps[1].d)}</span><span>Main checkpoint. We'll only call the rule "still alive" if the paper account is up after costs. Given the failed altcoin test, even that would be modest evidence.</span></div>
     </div>
   </section>
+
+  <details class="how" id="proof">
+    <summary>Proof: check we didn't change anything afterwards</summary>
+    <p class="muted" style="margin:10px 0 0;font-size:14px;max-width:80ch">Each week's positions are saved as a small file, and its fingerprint (SHA-256) is stamped into the Bitcoin blockchain through <a href="https://opentimestamps.org" target="_blank" rel="noopener">OpenTimestamps</a>, a free public service. Nobody, including us, can backdate a Bitcoin block, so the stamp proves the file existed at that time. To check a week, download its positions file and its .ots proof and drop both on <a href="https://opentimestamps.org" target="_blank" rel="noopener">opentimestamps.org</a>. It shows the Bitcoin block and time. The files are also committed by an automated GitHub job whose run log has GitHub's own timestamps.</p>
+    ${(D.proofs || []).length ? `<div class="tbl" style="margin-top:10px"><table><thead><tr><th>Week of</th><th>Fingerprint (SHA-256)</th><th class="hide-sm">Stamped</th><th>Bitcoin</th><th>Files</th></tr></thead><tbody>
+      ${D.proofs.slice().reverse().map(p => `<tr><td>${fmtDate(p.week)}</td><td class="mono" style="font-size:12px" title="${esc(p.sha256)}">${esc(p.sha256.slice(0, 16))}…</td>
+        <td class="hide-sm">${esc(localTime(utcStamp(p.stamped_utc)))}</td>
+        <td>${p.bitcoin_block ? 'block ' + Number(p.bitcoin_block).toLocaleString('en-US') + ' ✓' : 'pending'}</td>
+        <td><a href="${raw(p.week + '.csv')}">positions</a> · <a href="${raw(p.week + '.csv.ots')}">.ots proof</a>${p.run_url ? ` · <a href="${esc(p.run_url)}" target="_blank" rel="noopener">run log</a>` : ''}</td></tr>`).join('')}
+    </tbody></table></div>
+    <p class="muted" style="font-size:13px;margin:8px 0 0">Week 1 (Sep 28) was published by hand at the start of the experiment, so it has no automated run log. Its positions were committed at 12:39 UTC on Sep 29 and Bitcoin-stamped at 16:38 UTC, about 13 and 17 hours into the week. From week 2 on, publishing, stamping and committing happen in one automated run right after the Monday close.</p>` : ''}
+  </details>
 
   <details class="how">
     <summary>Exactly how the rule works</summary>

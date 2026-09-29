@@ -10,12 +10,13 @@ jobs:
   update:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - run: pip install -r lab/requirements.txt
       - run: python lab/m1.py
+      - run: python lab/proof.py      # OpenTimestamps: anchor each week's positions file in Bitcoin
       - name: Commit new data and positions
         run: |
           git config user.name "glassbox-lab"
