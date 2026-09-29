@@ -109,6 +109,9 @@ details.how ul{margin:10px 0 0;padding-left:20px;display:grid;gap:6px;max-width:
   const fmtDate = s => new Date(s + 'T00:00:00Z').toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC'});
   const addDays = (s, n) => { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
   const START = '2026-09-28';
+  const usd0 = x => '$' + Math.round(x).toLocaleString('en-US');
+  const bank = usd0(D.bankroll);
+  const gross = D.book.reduce((s, p) => s + Math.abs(p.weight), 0);
 
   const eq = D.equity;
   const last = eq.length ? eq[eq.length - 1] : null;
@@ -147,7 +150,7 @@ details.how ul{margin:10px 0 0;padding-left:20px;display:grid;gap:6px;max-width:
     if (!rows.length) return '<p class="empty">None this week.</p>';
     return `<div class="tbl"><table><thead><tr><th>Coin</th><th class="r">Paper size</th><th class="r">Entry</th><th class="r">Price move</th><th class="r">P&amp;L</th></tr></thead><tbody>
       ${rows.map(p => { const mv = p.now == null ? null : p.now / p.entry - 1; const pl = mv == null ? null : mv * (which === 'long' ? 1 : -1);
-        return `<tr><td><b>${esc(p.coin)}</b></td><td class="num">$${Math.round(Math.abs(p.weight) * D.bankroll)}</td><td class="num">${price(p.entry)}</td>
+        return `<tr><td><b>${esc(p.coin)}</b></td><td class="num">${usd0(Math.abs(p.weight) * D.bankroll)}</td><td class="num">${price(p.entry)}</td>
           <td class="num">${mv == null ? '–' : pct(mv)}</td><td class="num ${pl == null ? '' : cls(pl)}">${pl == null ? '–' : pct(pl)}</td></tr>`; }).join('')}
     </tbody></table></div>`;
   }
@@ -160,7 +163,7 @@ details.how ul{margin:10px 0 0;padding-left:20px;display:grid;gap:6px;max-width:
   <section class="intro">
     <div class="label">Momentum lab · public research log</div>
     <h1>Can a simple momentum rule beat memecoins?</h1>
-    <p>We're testing one trading rule in public, with a $1,000 paper account and no real money. Every Monday's positions are committed to our <a href="${D.repo}/commits/main/lab/positions.csv" target="_blank" rel="noopener">public GitHub repo</a> before the week plays out, so they can't be changed with hindsight. Losing weeks stay up.</p>
+    <p>We're testing one trading rule in public, with a ${bank} paper account and no real money. Every Monday's positions are committed to our <a href="${D.repo}/commits/main/lab/positions.csv" target="_blank" rel="noopener">public GitHub repo</a> before the week plays out, so they can't be changed with hindsight. Losing weeks stay up.</p>
   </section>
 
   <section aria-label="What we know so far" style="display:grid;gap:12px">
@@ -177,7 +180,7 @@ details.how ul{margin:10px 0 0;padding-left:20px;display:grid;gap:6px;max-width:
 
   <section class="panel" aria-label="Paper account">
     <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
-      <h2>Paper account</h2><span class="muted" style="font-size:13px">Started ${fmtDate(START)} with $1,000 · data through ${esc(D.status.data_through ? fmtDate(D.status.data_through) : '–')} close (UTC)</span>
+      <h2>Paper account</h2><span class="muted" style="font-size:13px">Started ${fmtDate(START)} with ${bank} · data through ${esc(D.status.data_through ? fmtDate(D.status.data_through) : '–')} close (UTC)</span>
     </div>
     <div class="stats">
       <div class="stat"><div class="label">Value</div><div class="v">${usd(last ? last.e : D.bankroll)}</div><div class="s ${cls(ret)}">${last ? pct(ret, 2) + ' since start' : 'first result after the next daily close'}</div></div>
@@ -198,7 +201,7 @@ details.how ul{margin:10px 0 0;padding-left:20px;display:grid;gap:6px;max-width:
       <div class="panel"><h3><span class="side long">Long</span> · bets these keep rising</h3>${side('long')}</div>
       <div class="panel"><h3><span class="side short">Short</span> · bets these keep falling</h3>${side('short')}</div>
     </div>
-    <p class="muted" style="font-size:13px">Entry is the Monday daily close (00:00 UTC). Price move and P&amp;L are from that close to the latest one, before costs. Sizes add up to about $800 long-and-short combined: the rule caps each coin, so it rarely uses the whole $1,000.</p>
+    <p class="muted" style="font-size:13px">Entry is the Monday daily close (00:00 UTC). Price move and P&amp;L are from that close to the latest one, before costs. This week's sizes add up to ${usd0(gross * D.bankroll)} (half long, half short). Each coin's size is capped, so the rule rarely uses the whole ${bank}.</p>
   </section>
 
   <section class="panel" aria-label="Weekly results">

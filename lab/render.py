@@ -17,7 +17,7 @@ from datetime import date, timedelta
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 REPO = "https://github.com/paulfryy/glass-box"
-BANKROLL = 1000.0
+BANKROLL = 5000.0            # paper account size (results are the same in % terms)
 REVIEW_WEEKS = (13, 26)
 
 

@@ -37,7 +37,7 @@ DATA = os.path.join(HERE, "data")
 S3 = "https://s3-ap-northeast-1.amazonaws.com/data.binance.vision"
 FILES = "https://data.binance.vision/"
 START = pd.Timestamp("2026-09-28", tz="UTC")          # first Monday close traded on paper
-BANKROLL = 1000.0
+BANKROLL = 5000.0            # paper account size (results are the same in % terms)
 FEE_BPS, SLIP_BPS = 10, 15
 BOOKS = [(14, 3), (14, 5), (30, 3), (30, 5)]
 MIN_AGE, MIN_ADV = 14, 2e6
