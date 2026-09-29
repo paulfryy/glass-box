@@ -114,12 +114,20 @@ def decode_trade(p):
 
 
 def sol_usd():
-    try:
-        r = requests.get("https://api.coingecko.com/api/v3/simple/price",
-                         params={"ids": "solana", "vs_currencies": "usd"}, timeout=20)
-        return float(r.json()["solana"]["usd"])
-    except Exception:
-        return None
+    """SOL price in USD from keyless public tickers (CoinGecko now refuses keyless requests)."""
+    sources = [
+        ("https://api.gateio.ws/api/v4/spot/tickers?currency_pair=SOL_USDT", lambda j: j[0]["last"]),
+        ("https://www.okx.com/api/v5/market/ticker?instId=SOL-USDT", lambda j: j["data"][0]["last"]),
+        ("https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd", lambda j: j["solana"]["usd"]),
+    ]
+    for url, pick in sources:
+        try:
+            p = float(pick(requests.get(url, timeout=20).json()))
+            if p > 0:
+                return p
+        except Exception:
+            continue
+    return None
 
 
 def snapshot(key, mint, lookback_days, max_pages):
