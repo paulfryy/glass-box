@@ -1,0 +1,238 @@
+<title>Momentum Lab · Glass Box</title>
+<meta name="description" content="A public, pre-registered paper-trading test of one memecoin momentum rule. Positions are committed before each week plays out; losses stay up.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#F2F5F3; --surface:#FFFFFF; --ink:#15201D; --muted:#5A6B66; --line:#D5DEDA;
+  --accent:#0B7A6E; --accent-soft:#DDEFEB; --pass:#2F8F5B; --pass-soft:#E1F2E8;
+  --fail:#C0392B; --fail-soft:#F8E1DE; --warn:#B86E12; --warn-soft:#F7EAD6;
+  --bar:#E4EBE8; --btc:#8A7A5C;
+  --display:"IBM Plex Sans Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"IBM Plex Sans","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,"Courier New",monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0E1614; --surface:#15201D; --ink:#E4ECE9; --muted:#9AAAA5; --line:#2A3833;
+    --accent:#3CC2B0; --accent-soft:#143530; --pass:#5CC98B; --pass-soft:#16301F;
+    --fail:#F07A6C; --fail-soft:#3A1B17; --warn:#E3A24B; --warn-soft:#3A2A12; --bar:#22302C; --btc:#C2B08A;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0E1614; --surface:#15201D; --ink:#E4ECE9; --muted:#9AAAA5; --line:#2A3833;
+  --accent:#3CC2B0; --accent-soft:#143530; --pass:#5CC98B; --pass-soft:#16301F;
+  --fail:#F07A6C; --fail-soft:#3A1B17; --warn:#E3A24B; --warn-soft:#3A2A12; --bar:#22302C; --btc:#C2B08A;
+}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
+.wrap{max-width:1080px;margin:0 auto;padding-inline:20px;padding-block:28px 56px;display:grid;gap:28px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;letter-spacing:.01em}
+h1{font-size:clamp(28px,5vw,40px);font-weight:700;line-height:1.05}
+h2{font-size:20px;font-weight:600}
+h3{font-size:16px;font-weight:600}
+p{margin:0}
+.label{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+a{color:var(--accent)}
+a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+[hidden]{display:none!important}
+
+.tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tabs a{font-family:var(--display);font-weight:600;font-size:15px;text-decoration:none;color:var(--muted);padding:10px 14px;border-bottom:3px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.tabs a[aria-current="page"]{color:var(--ink);border-bottom-color:var(--accent)}
+
+.intro{display:grid;gap:10px}
+.intro p{color:var(--muted);max-width:68ch}
+
+.evidence{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.ev{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:grid;gap:6px;align-content:start}
+.ev .pill{justify-self:start}
+.ev p{font-size:14px;color:var(--muted)}
+.ev b{color:var(--ink)}
+.pill{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:5px}
+.pill.pass{background:var(--pass-soft);color:var(--pass)} .pill.fail{background:var(--fail-soft);color:var(--fail)} .pill.note{background:var(--warn-soft);color:var(--warn)}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 18px;display:grid;gap:12px;min-width:0}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px}
+.stat .v{font-family:var(--mono);font-size:24px;font-weight:500;font-variant-numeric:tabular-nums}
+.stat .s{font-size:12.5px;color:var(--muted)}
+.up{color:var(--pass)} .down{color:var(--fail)}
+
+.chart svg{width:100%;height:auto;display:block}
+.legend{display:flex;gap:16px;font-size:12.5px;color:var(--muted);flex-wrap:wrap}
+.legend i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:6px}
+
+.book{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);text-align:left;font-weight:600;padding:6px 8px;border-bottom:1px solid var(--line)}
+th.r,td.num{text-align:right}
+td{padding:7px 8px;border-bottom:1px solid var(--line)}
+td.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.side{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.side.long{color:var(--pass)} .side.short{color:var(--fail)}
+.empty{color:var(--muted);font-size:14px}
+
+.checkpoints{display:grid;gap:8px}
+.cp{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:baseline;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.cp .when{font-family:var(--mono);font-size:13px;color:var(--muted);white-space:nowrap}
+
+details.how{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 18px}
+details.how summary{cursor:pointer;font-family:var(--display);font-weight:600;font-size:17px}
+details.how ul{margin:10px 0 0;padding-left:20px;display:grid;gap:6px;max-width:80ch}
+.foot{color:var(--muted);font-size:13px;display:grid;gap:4px;max-width:80ch}
+@media (max-width:760px){.book{grid-template-columns:1fr}}
+</style>
+
+<div class="wrap" style="padding-block:18px 0">
+  <nav class="tabs" aria-label="Sections">
+    <a href="/">This coin</a>
+    <a href="/#check">Check any coin</a>
+    <a href="/lab/" aria-current="page">Momentum lab</a>
+  </nav>
+</div>
+<div class="wrap" id="lab"></div>
+
+<script id="data" type="application/json">__DATA__</script>
+<script>
+(function(){
+  const D = JSON.parse(document.getElementById('data').textContent);
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+  const pct = (x, d=1) => (x >= 0 ? '+' : '−') + Math.abs(x * 100).toFixed(d) + '%';
+  const cls = x => x > 0 ? 'up' : (x < 0 ? 'down' : '');
+  const usd = x => '$' + x.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  const price = x => x == null ? '–' : (x >= 1 ? x.toFixed(3) : x.toPrecision(4));
+  const fmtDate = s => new Date(s + 'T00:00:00Z').toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC'});
+  const addDays = (s, n) => { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+  const START = '2026-09-28';
+
+  const eq = D.equity;
+  const last = eq.length ? eq[eq.length - 1] : null;
+  const ret = last ? last.e / D.bankroll - 1 : 0;
+  const btcRet = last ? last.b / D.bankroll - 1 : 0;
+  let peak = D.bankroll, dd = 0;
+  for (const r of eq) { peak = Math.max(peak, r.e); dd = Math.min(dd, r.e / peak - 1); }
+
+  // ---- chart
+  function chart(){
+    if (eq.length < 2) return `<p class="empty">The chart starts once there are two daily closes after ${fmtDate(START)}.</p>`;
+    const pts = [{d: START, e: D.bankroll, b: D.bankroll}, ...eq];
+    const W = 800, H = 240, pl = 56, pr = 12, pt = 12, pb = 28;
+    const vals = pts.flatMap(p => [p.e, p.b]);
+    let lo = Math.min(...vals, D.bankroll), hi = Math.max(...vals, D.bankroll);
+    const pad = (hi - lo) * 0.08 || 20; lo -= pad; hi += pad;
+    const x = i => pl + i * (W - pl - pr) / (pts.length - 1);
+    const y = v => pt + (hi - v) * (H - pt - pb) / (hi - lo);
+    const line = k => pts.map((p, i) => `${x(i).toFixed(1)},${y(p[k]).toFixed(1)}`).join(' ');
+    const ticks = [lo + pad, (lo + hi) / 2, hi - pad];
+    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Paper account value compared with holding BTC, since ${fmtDate(START)}">
+      ${ticks.map(t => `<line x1="${pl}" x2="${W - pr}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)"/>
+        <text x="${pl - 8}" y="${y(t) + 4}" text-anchor="end" font-size="11" fill="var(--muted)" font-family="var(--mono)">$${Math.round(t)}</text>`).join('')}
+      <line x1="${pl}" x2="${W - pr}" y1="${y(D.bankroll)}" y2="${y(D.bankroll)}" stroke="var(--muted)" stroke-dasharray="3 4" opacity=".6"/>
+      <polyline points="${line('b')}" fill="none" stroke="var(--btc)" stroke-width="2"/>
+      <polyline points="${line('e')}" fill="none" stroke="var(--accent)" stroke-width="2.5"/>
+      <text x="${pl}" y="${H - 8}" font-size="11" fill="var(--muted)">${fmtDate(pts[0].d)}</text>
+      <text x="${W - pr}" y="${H - 8}" font-size="11" fill="var(--muted)" text-anchor="end">${fmtDate(pts[pts.length - 1].d)}</text>
+    </svg>`;
+  }
+
+  // ---- this week's book
+  const wk = D.weeks.length ? D.weeks[D.weeks.length - 1] : null;
+  function side(which){
+    const rows = D.book.filter(p => p.side === which).sort((a, b) => Math.abs(b.weight) - Math.abs(a.weight));
+    if (!rows.length) return '<p class="empty">None this week.</p>';
+    return `<div class="tbl"><table><thead><tr><th>Coin</th><th class="r">Paper size</th><th class="r">Entry</th><th class="r">Price move</th><th class="r">P&amp;L</th></tr></thead><tbody>
+      ${rows.map(p => { const mv = p.now == null ? null : p.now / p.entry - 1; const pl = mv == null ? null : mv * (which === 'long' ? 1 : -1);
+        return `<tr><td><b>${esc(p.coin)}</b></td><td class="num">$${Math.round(Math.abs(p.weight) * D.bankroll)}</td><td class="num">${price(p.entry)}</td>
+          <td class="num">${mv == null ? '–' : pct(mv)}</td><td class="num ${pl == null ? '' : cls(pl)}">${pl == null ? '–' : pct(pl)}</td></tr>`; }).join('')}
+    </tbody></table></div>`;
+  }
+
+  const hist = D.history.slice().reverse();
+  const nWeeks = D.weeks.length;
+  const cps = D.review_weeks.map(n => ({n, d: addDays(START, 7 * n)}));
+
+  document.getElementById('lab').innerHTML = `
+  <section class="intro">
+    <div class="label">Momentum lab · public research log</div>
+    <h1>Can a simple momentum rule beat memecoins?</h1>
+    <p>We're testing one trading rule in public, with a $1,000 paper account and no real money. Every Monday's positions are committed to our <a href="${D.repo}/commits/main/lab/positions.csv" target="_blank" rel="noopener">public GitHub repo</a> before the week plays out, so they can't be changed with hindsight. Losing weeks stay up.</p>
+  </section>
+
+  <section aria-label="What we know so far" style="display:grid;gap:12px">
+    <h2>What we know so far</h2>
+    <div class="evidence">
+      <div class="ev"><span class="pill pass">Passed</span><h3>Six-month test on memecoins</h3>
+        <p>Rule frozen first, then tested on Apr–Sep 2026 data it had never seen: <b>+30% after costs</b>, not tied to the market's direction. But six months is short: we put only about a <b>75% chance</b> on it being more than luck.</p></div>
+      <div class="ev"><span class="pill fail">Failed</span><h3>Same rule on 659 other crypto coins</h3>
+        <p>Pre-registered test on 2021–2026: it <b>lost 13% in the 2022 bear market</b>. Without a few rare funding windfalls it lost 37% overall: the price signal didn't beat trading costs.</p></div>
+      <div class="ev"><span class="pill note">Our expectation</span><h3>More likely luck than edge</h3>
+        <p>The memecoin result may be specific to that sample. This page is how we find out: live, week by week, with nothing hidden.</p></div>
+    </div>
+  </section>
+
+  <section class="panel" aria-label="Paper account">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
+      <h2>Paper account</h2><span class="muted" style="font-size:13px">Started ${fmtDate(START)} with $1,000 · data through ${esc(D.status.data_through ? fmtDate(D.status.data_through) : '–')} close (UTC)</span>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="label">Value</div><div class="v">${usd(last ? last.e : D.bankroll)}</div><div class="s ${cls(ret)}">${last ? pct(ret, 2) + ' since start' : 'first result after the next daily close'}</div></div>
+      <div class="stat"><div class="label">Holding BTC instead</div><div class="v">${usd(last ? last.b : D.bankroll)}</div><div class="s ${cls(btcRet)}">${last ? pct(btcRet, 2) : '–'}</div></div>
+      <div class="stat"><div class="label">Worst drop</div><div class="v">${dd < 0 ? pct(dd, 1) : '0%'}</div><div class="s">from a previous high</div></div>
+      <div class="stat"><div class="label">Weeks live</div><div class="v">${nWeeks}</div><div class="s">of ${D.review_weeks[1]} planned</div></div>
+    </div>
+    <div class="chart">${chart()}</div>
+    <div class="legend"><span><i style="background:var(--accent)"></i>Momentum rule (after costs)</span><span><i style="background:var(--btc)"></i>Buy and hold BTC</span></div>
+  </section>
+
+  <section style="display:grid;gap:12px" aria-label="This week's positions">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
+      <h2>This week's positions${wk ? ' · week of ' + fmtDate(wk) : ''}</h2>
+      ${D.book.length ? `<span class="muted" style="font-size:13px">Published ${esc(D.book[0].published)} UTC · <a href="${D.repo}/commits/main/lab/positions.csv" target="_blank" rel="noopener">see the commit</a></span>` : ''}
+    </div>
+    <div class="book">
+      <div class="panel"><h3><span class="side long">Long</span> · bets these keep rising</h3>${side('long')}</div>
+      <div class="panel"><h3><span class="side short">Short</span> · bets these keep falling</h3>${side('short')}</div>
+    </div>
+    <p class="muted" style="font-size:13px">Entry is the Monday daily close (00:00 UTC). Price move and P&amp;L are from that close to the latest one, before costs. Sizes add up to about $800 long-and-short combined: the rule caps each coin, so it rarely uses the whole $1,000.</p>
+  </section>
+
+  <section class="panel" aria-label="Weekly results">
+    <h2>Week by week</h2>
+    ${hist.length ? `<div class="tbl"><table><thead><tr><th>Week of</th><th class="r">Rule, after costs</th><th class="r">Trading costs</th><th class="r">Funding</th><th class="r">BTC</th></tr></thead><tbody>
+      ${hist.map(h => `<tr><td>${fmtDate(h.week)}${h.days < 7 ? ' <span class="muted">(so far)</span>' : ''}</td><td class="num ${cls(h.ret)}">${pct(h.ret, 2)}</td>
+        <td class="num">${pct(-h.cost, 2)}</td><td class="num">${pct(h.funding, 2)}</td><td class="num ${cls(h.btc)}">${pct(h.btc, 2)}</td></tr>`).join('')}
+    </tbody></table></div>` : '<p class="empty">The first week is in progress; results appear after each daily close.</p>'}
+    <p class="muted" style="font-size:13px">Funding is the fee that perpetual-futures longs and shorts pay each other. Binance publishes it once a month, so each month's funding is added when it appears (funding included through ${esc(D.status.funding_through ? fmtDate(D.status.funding_through) : '–')}) and recent weeks may shift slightly.</p>
+  </section>
+
+  <section style="display:grid;gap:12px" aria-label="Checkpoints">
+    <h2>When we'll judge it</h2>
+    <div class="checkpoints">
+      <div class="cp"><span class="when">Week ${cps[0].n} · ${fmtDate(cps[0].d)}</span><span>First write-up here, win or lose. Too early to conclude anything, but big surprises either way will show.</span></div>
+      <div class="cp"><span class="when">Week ${cps[1].n} · ${fmtDate(cps[1].d)}</span><span>Main checkpoint. We'll only call the rule "still alive" if the paper account is up after costs. Given the failed altcoin test, even that would be modest evidence.</span></div>
+    </div>
+  </section>
+
+  <details class="how">
+    <summary>Exactly how the rule works</summary>
+    <ul>
+      <li><b>Coins:</b> a fixed list of 53 memecoin perpetual futures on Binance, frozen with the rule on Sep 27, 2026 (<a href="${D.repo}/blob/main/lab/universe.yaml" target="_blank" rel="noopener">list</a>). Each week, only coins with 14+ days of history and a typical daily volume of at least $2 million count.</li>
+      <li><b>Signal:</b> rank those coins by their return over the last 14 days, and separately over the last 30 days. For each, go long the top 3 and short the bottom 3, and separately the top 5 and bottom 5. The four books are averaged, so a coin picked by all four gets the biggest position.</li>
+      <li><b>Timing:</b> positions are set at the Monday daily close (00:00 UTC Tuesday) and held until the next Monday.</li>
+      <li><b>Costs:</b> 0.10% fee plus 0.15% slippage on every dollar traded, plus actual funding. No leverage beyond the positions shown.</li>
+      <li><b>Data:</b> Binance's free public archive, <a href="https://data.binance.vision" target="_blank" rel="noopener">data.binance.vision</a>. <a href="${D.repo}/blob/main/lab/m1.py" target="_blank" rel="noopener">The code</a> and every daily number (<a href="${D.repo}/blob/main/lab/equity.csv" target="_blank" rel="noopener">equity.csv</a>) are public.</li>
+      <li><b>Nothing gets re-tuned.</b> If the rule does badly, it stays up and does badly here.</li>
+    </ul>
+  </details>
+
+  <footer class="foot">
+    <div><b>Not financial advice, and not a signals service.</b> This is a research log with no real money. Nothing here is connected to the Glass Box coin. Perpetual futures are leveraged derivatives that can lose money fast, and many countries restrict them for retail traders.</div>
+    <div>Data last updated ${esc(D.status.updated_utc || '–')} UTC. We check for new daily prices twice a day.</div>
+  </footer>`;
+})();
+</script>

@@ -96,8 +96,8 @@ td.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-num
 [hidden]{display:none!important}   /* .wrap{display:grid} would otherwise override the hidden attribute */
 
 /* tabs */
-.tabs{display:flex;gap:6px;border-bottom:1px solid var(--line)}
-.tabs a{font-family:var(--display);font-weight:600;font-size:15px;text-decoration:none;color:var(--muted);padding:10px 14px;border-bottom:3px solid transparent;margin-bottom:-1px}
+.tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tabs a{font-family:var(--display);font-weight:600;font-size:15px;text-decoration:none;color:var(--muted);padding:10px 14px;border-bottom:3px solid transparent;margin-bottom:-1px;white-space:nowrap}
 .tabs a[aria-current="page"]{color:var(--ink);border-bottom-color:var(--accent)}
 
 /* scanner (Check any coin) */
@@ -159,6 +159,7 @@ details.holders summary{cursor:pointer;font-family:var(--display);font-weight:60
   <nav class="tabs" aria-label="Sections">
     <a href="#coin" id="tabCoin" aria-current="page">This coin</a>
     <a href="#check" id="tabCheck">Check any coin</a>
+    <a href="/lab/">Momentum lab</a>
   </nav>
 </div>
 <div class="wrap" id="app"></div>

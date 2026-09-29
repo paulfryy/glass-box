@@ -1,0 +1,27 @@
+name: Momentum lab
+on:
+  workflow_dispatch: {}          # started twice a day by the Cloudflare Worker's cron, or by hand
+permissions:
+  contents: write                # commits lab/positions.csv + results; the git history is the public record
+concurrency:
+  group: lab
+  cancel-in-progress: false
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r lab/requirements.txt
+      - run: python lab/m1.py
+      - name: Commit new data and positions
+        run: |
+          git config user.name "glassbox-lab"
+          git config user.email "glassbox-lab@users.noreply.github.com"
+          git add lab/
+          if git diff --cached --quiet; then echo "nothing new"; exit 0; fi
+          git commit -m "Momentum lab: data through $(grep data_through lab/status.txt | cut -d= -f2)"
+          git pull --rebase
+          git push

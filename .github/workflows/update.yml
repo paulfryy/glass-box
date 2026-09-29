@@ -25,6 +25,7 @@ jobs:
       - run: python build.py
         env:
           HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
+      - run: python lab/render.py      # Momentum lab page, from the committed lab/*.csv (no network)
       - uses: actions/upload-pages-artifact@v3
         with:
           path: public

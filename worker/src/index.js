@@ -196,15 +196,18 @@ export async function checkCoin(env, mint) {
 // ---------- clock: rebuild the coin dashboard every 10 minutes ----------
 // GitHub's own scheduler skips frequent jobs, so a Cloudflare Cron Trigger starts the
 // GitHub Action instead. GITHUB_TOKEN is a fine-grained token limited to Actions on this repo.
-async function triggerRebuild(env) {
-  const r = await fetch("https://api.github.com/repos/paulfryy/glass-box/actions/workflows/update.yml/dispatches", {
+async function triggerRebuild(env, workflow = "update.yml") {
+  const r = await fetch(`https://api.github.com/repos/paulfryy/glass-box/actions/workflows/${workflow}/dispatches`, {
     method: "POST",
     headers: { Authorization: "Bearer " + env.GITHUB_TOKEN, Accept: "application/vnd.github+json",
       "User-Agent": "glassbox-api", "X-GitHub-Api-Version": "2022-11-28" },
     body: JSON.stringify({ ref: "main" }),
   });
-  if (r.status !== 204) console.log("rebuild trigger failed", r.status, (await r.text()).slice(0, 200));
+  if (r.status !== 204) console.log(workflow, "trigger failed", r.status, (await r.text()).slice(0, 200));
 }
+
+// Momentum lab: Binance publishes each day's candle shortly after 00:00 UTC; check twice a day.
+const LAB_CRON = "20 1,13 * * *";
 
 // ---------- HTTP ----------
 const hits = new Map();   // best-effort per-isolate rate limit
@@ -222,7 +225,7 @@ const json = (obj, status, origin, extra = {}) => new Response(JSON.stringify(ob
 
 export default {
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(triggerRebuild(env));
+    ctx.waitUntil(triggerRebuild(env, event.cron === LAB_CRON ? "lab.yml" : "update.yml"));
   },
 
   async fetch(request, env, ctx) {
