@@ -1,0 +1,240 @@
+{
+ "_note": "Live-price source per coin for the lab page (indicative only; official results use Binance daily closes). Each match was checked against the Binance close of 2026-09-28 (within -20%/+25%). 'unavailable' coins have no source that answers Cloudflare's servers; the page shows their last daily close.",
+ "coins": {
+  "1000000MOGUSDT": {
+   "src": "gate",
+   "sym": "MOG_USDT",
+   "mult": 1000000
+  },
+  "1000BONKUSDT": {
+   "src": "gate",
+   "sym": "BONK_USDT",
+   "mult": 1000
+  },
+  "1000CATUSDT": {
+   "src": "mexc",
+   "sym": "CAT_USDT",
+   "mult": 1000
+  },
+  "1000FLOKIUSDT": {
+   "src": "gate",
+   "sym": "FLOKI_USDT",
+   "mult": 1000
+  },
+  "1000PEPEUSDT": {
+   "src": "gate",
+   "sym": "PEPE_USDT",
+   "mult": 1000
+  },
+  "1000RATSUSDT": {
+   "src": "gate",
+   "sym": "RATS_USDT",
+   "mult": 1000
+  },
+  "1000SATSUSDT": {
+   "src": "gate",
+   "sym": "SATS_USDT",
+   "mult": 1000
+  },
+  "1000SHIBUSDT": {
+   "src": "gate",
+   "sym": "SHIB_USDT",
+   "mult": 1000
+  },
+  "ACTUSDT": {
+   "src": "gate",
+   "sym": "ACT_USDT",
+   "mult": 1
+  },
+  "ARCUSDT": {
+   "src": "gate",
+   "sym": "ARC_USDT",
+   "mult": 1
+  },
+  "BANUSDT": {
+   "src": "gate",
+   "sym": "BAN_USDT",
+   "mult": 1
+  },
+  "BOMEUSDT": {
+   "src": "gate",
+   "sym": "BOME_USDT",
+   "mult": 1
+  },
+  "BRETTUSDT": {
+   "src": "gate",
+   "sym": "BRETT_USDT",
+   "mult": 1
+  },
+  "CATUSDT": {
+   "src": "gate",
+   "sym": "CAT_USDT",
+   "mult": 1
+  },
+  "CHILLGUYUSDT": {
+   "src": "gate",
+   "sym": "CHILLGUY_USDT",
+   "mult": 1
+  },
+  "DOGEUSDT": {
+   "src": "gate",
+   "sym": "DOGE_USDT",
+   "mult": 1
+  },
+  "DOGSUSDT": {
+   "src": "gate",
+   "sym": "DOGS_USDT",
+   "mult": 1
+  },
+  "FARTCOINUSDT": {
+   "src": "gate",
+   "sym": "FARTCOIN_USDT",
+   "mult": 1
+  },
+  "GOATUSDT": {
+   "src": "gate",
+   "sym": "GOAT_USDT",
+   "mult": 1
+  },
+  "GRIFFAINUSDT": {
+   "src": "gate",
+   "sym": "GRIFFAIN_USDT",
+   "mult": 1
+  },
+  "HMSTRUSDT": {
+   "src": "gate",
+   "sym": "HMSTR_USDT",
+   "mult": 1
+  },
+  "KOMAUSDT": {
+   "src": "gate",
+   "sym": "KOMA_USDT",
+   "mult": 1
+  },
+  "MEMEUSDT": {
+   "src": "gate",
+   "sym": "MEME_USDT",
+   "mult": 1
+  },
+  "MEWUSDT": {
+   "src": "gate",
+   "sym": "MEW_USDT",
+   "mult": 1
+  },
+  "MOODENGUSDT": {
+   "src": "gate",
+   "sym": "MOODENG_USDT",
+   "mult": 1
+  },
+  "MUBARAKUSDT": {
+   "src": "gate",
+   "sym": "MUBARAK_USDT",
+   "mult": 1
+  },
+  "NEIROUSDT": {
+   "src": "okx",
+   "sym": "NEIRO-USDT-SWAP",
+   "mult": 1
+  },
+  "NOTUSDT": {
+   "src": "gate",
+   "sym": "NOT_USDT",
+   "mult": 1
+  },
+  "ORDIUSDT": {
+   "src": "gate",
+   "sym": "ORDI_USDT",
+   "mult": 1
+  },
+  "PENGUUSDT": {
+   "src": "gate",
+   "sym": "PENGU_USDT",
+   "mult": 1
+  },
+  "PEOPLEUSDT": {
+   "src": "gate",
+   "sym": "PEOPLE_USDT",
+   "mult": 1
+  },
+  "PIPPINUSDT": {
+   "src": "gate",
+   "sym": "PIPPIN_USDT",
+   "mult": 1
+  },
+  "PNUTUSDT": {
+   "src": "gate",
+   "sym": "PNUT_USDT",
+   "mult": 1
+  },
+  "POPCATUSDT": {
+   "src": "gate",
+   "sym": "POPCAT_USDT",
+   "mult": 1
+  },
+  "PUMPUSDT": {
+   "src": "gate",
+   "sym": "PUMP_USDT",
+   "mult": 1
+  },
+  "SPXUSDT": {
+   "src": "gate",
+   "sym": "SPX_USDT",
+   "mult": 1
+  },
+  "SWARMSUSDT": {
+   "src": "gate",
+   "sym": "SWARMS_USDT",
+   "mult": 1
+  },
+  "TRUMPUSDT": {
+   "src": "gate",
+   "sym": "TRUMP_USDT",
+   "mult": 1
+  },
+  "TSTUSDT": {
+   "src": "mexc",
+   "sym": "TST_USDT",
+   "mult": 1
+  },
+  "TURBOUSDT": {
+   "src": "gate",
+   "sym": "TURBO_USDT",
+   "mult": 1
+  },
+  "USELESSUSDT": {
+   "src": "gate",
+   "sym": "USELESS_USDT",
+   "mult": 1
+  },
+  "WENUSDT": {
+   "src": "gate",
+   "sym": "WEN_USDT",
+   "mult": 1
+  },
+  "WIFUSDT": {
+   "src": "gate",
+   "sym": "WIF_USDT",
+   "mult": 1
+  },
+  "WLFIUSDT": {
+   "src": "gate",
+   "sym": "WLFI_USDT",
+   "mult": 1
+  },
+  "ZEREBROUSDT": {
+   "src": "gate",
+   "sym": "ZEREBRO_USDT",
+   "mult": 1
+  }
+ },
+ "unavailable": [
+  "1000XUSDT",
+  "AI16ZUSDT",
+  "DEGENUSDT",
+  "MYROUSDT",
+  "PONKEUSDT",
+  "SLERFUSDT",
+  "VINEUSDT",
+  "1MBABYDOGEUSDT"
+ ]
+}

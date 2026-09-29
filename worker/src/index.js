@@ -1,4 +1,6 @@
-// Glass Box "Check any coin" API: GET /check?mint=<address>
+import LIVE from "../../lab/live_sources.json";
+
+// Glass Box "Check any coin" API: GET /check?mint=<address>  (+ GET /prices for the Momentum lab)
 // Reads a pump.fun coin's public on-chain data via Helius and returns red-flag checks.
 // The Helius key is a Worker secret (HELIUS_API_KEY) and never reaches the browser.
 
@@ -209,6 +211,40 @@ async function triggerRebuild(env, workflow = "update.yml") {
 // Momentum lab: Binance publishes each day's candle shortly after 00:00 UTC; check twice a day.
 const LAB_CRON = "20 1,13 * * *";
 
+// ---------- Momentum lab: live prices (GET /prices) ----------
+// Indicative only: the lab's official results use Binance daily closes, but Binance's live API
+// refuses US visitors, so live marks come from other exchanges' public futures tickers (no keys).
+// lab/live_sources.json maps each coin to a source, each match checked against Binance's close.
+const PRICE_TTL_S = 60;
+const SOURCES = {
+  gate: { url: "https://api.gateio.ws/api/v4/futures/usdt/tickers", rows: j => j.map(t => [t.contract, t.last]) },
+  mexc: { url: "https://contract.mexc.com/api/v1/contract/ticker", rows: j => j.data.map(t => [t.symbol, t.lastPrice]) },
+  okx: { url: "https://www.okx.com/api/v5/market/tickers?instType=SWAP", rows: j => j.data.map(t => [t.instId, t.last]) },
+};
+
+async function prices(ctx, origin) {
+  const cacheKey = new Request("https://cache.glassbox/lab/prices/v3");
+  const hit = await caches.default.match(cacheKey);
+  if (hit) return json({ ...(await hit.json()), cached: true }, 200, origin);
+  const coins = LIVE.coins, used = [...new Set(Object.values(coins).map(c => c.src))];
+  const books = await Promise.all(used.map(async s => {
+    try {
+      const r = await fetch(SOURCES[s].url, { headers: { "User-Agent": "glassbox-lab" }, cf: { cacheTtl: 30 } });
+      return [s, new Map(SOURCES[s].rows(await r.json()))];
+    } catch (e) { return [s, new Map()]; }
+  }));
+  const bySrc = Object.fromEntries(books), out = {}, missing = [...LIVE.unavailable];
+  for (const [sym, c] of Object.entries(coins)) {
+    const p = Number(bySrc[c.src]?.get(c.sym));
+    if (p > 0) out[sym] = p * c.mult; else missing.push(sym);
+  }
+  const body = { ok: true, asOf: Math.floor(Date.now() / 1000), prices: out, unavailable: missing,
+    note: "Indicative live prices from other exchanges' futures; official lab results use Binance daily closes." };
+  ctx.waitUntil(caches.default.put(cacheKey, new Response(JSON.stringify(body),
+    { headers: { "content-type": "application/json", "Cache-Control": `max-age=${PRICE_TTL_S}` } })));
+  return json(body, 200, origin, { "Cache-Control": `public, max-age=${PRICE_TTL_S}` });
+}
+
 // ---------- HTTP ----------
 const hits = new Map();   // best-effort per-isolate rate limit
 function limited(ip) {
@@ -231,6 +267,7 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url), origin = request.headers.get("Origin") || "";
     if (request.method === "OPTIONS") return new Response(null, { headers: cors(origin) });
+    if (url.pathname === "/prices") return prices(ctx, origin);
     if (url.pathname !== "/check") return json({ ok: false, error: "Use /check?mint=<coin address>" }, 404, origin);
     const mint = (url.searchParams.get("mint") || "").trim();
     if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(mint)) return json({ ok: false, error: "That isn't a valid Solana address." }, 400, origin);

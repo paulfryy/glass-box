@@ -76,6 +76,8 @@ td.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .side{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
 .side.long{color:var(--pass)} .side.short{color:var(--fail)}
 .empty{color:var(--muted);font-size:14px}
+.live{font-size:13.5px;color:var(--muted);background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;padding:10px 14px;max-width:90ch}
+.live b{font-family:var(--mono);font-size:15px}
 
 .checkpoints{display:grid;gap:8px}
 .cp{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:baseline;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
@@ -145,14 +147,38 @@ details.how ul{margin:10px 0 0;padding-left:20px;display:grid;gap:6px;max-width:
 
   // ---- this week's book
   const wk = D.weeks.length ? D.weeks[D.weeks.length - 1] : null;
+  // live marks (indicative) from api.glassbox.gripe/prices; fall back to the last daily close
+  let live = null;
+  const mark = p => { const lp = live && live.prices[p.coin + 'USDT']; return lp ? {px: lp, live: true} : {px: p.now, live: false}; };
   function side(which){
     const rows = D.book.filter(p => p.side === which).sort((a, b) => Math.abs(b.weight) - Math.abs(a.weight));
     if (!rows.length) return '<p class="empty">None this week.</p>';
-    return `<div class="tbl"><table><thead><tr><th>Coin</th><th class="r">Paper size</th><th class="r">Entry</th><th class="r">Price move</th><th class="r">P&amp;L</th></tr></thead><tbody>
-      ${rows.map(p => { const mv = p.now == null ? null : p.now / p.entry - 1; const pl = mv == null ? null : mv * (which === 'long' ? 1 : -1);
+    return `<div class="tbl"><table><thead><tr><th>Coin</th><th class="r">Paper size</th><th class="r">Entry</th><th class="r">Now</th><th class="r">Price move</th><th class="r">P&amp;L</th></tr></thead><tbody>
+      ${rows.map(p => { const m = mark(p); const mv = m.px == null ? null : m.px / p.entry - 1; const pl = mv == null ? null : mv * (which === 'long' ? 1 : -1);
         return `<tr><td><b>${esc(p.coin)}</b></td><td class="num">${usd0(Math.abs(p.weight) * D.bankroll)}</td><td class="num">${price(p.entry)}</td>
+          <td class="num" title="${m.live ? 'Live price' : 'Last daily close (no live source for this coin)'}">${price(m.px)}${m.live || !live ? '' : '<sup>*</sup>'}</td>
           <td class="num">${mv == null ? '–' : pct(mv)}</td><td class="num ${pl == null ? '' : cls(pl)}">${pl == null ? '–' : pct(pl)}</td></tr>`; }).join('')}
     </tbody></table></div>`;
+  }
+  function liveLine(){
+    if (!live) return 'Prices below are from the last daily close. Live prices are loading…';
+    let pnl = 0, missing = 0;
+    for (const p of D.book) { const m = mark(p); if (!m.live) missing++; if (m.px != null) pnl += Math.abs(p.weight) * D.bankroll * (m.px / p.entry - 1) * (p.side === 'long' ? 1 : -1); }
+    const t = new Date(live.asOf * 1000).toISOString().slice(11, 16);
+    return `<b class="${cls(pnl)}">Live: ${pnl >= 0 ? '+' : '−'}${usd(Math.abs(pnl))}</b> on this week's positions since Monday's close, before costs (${t} UTC, updates every minute).
+      Indicative only: live prices come from Gate.io, MEXC and OKX futures because Binance's live feed isn't available in the US; the official account above uses Binance daily closes.${missing ? ` <sup>*</sup>${missing} coin${missing > 1 ? 's' : ''} without a live source show the last close.` : ''}`;
+  }
+  function renderBook(){
+    const b = document.getElementById('bookLong'); if (!b) return;
+    b.innerHTML = side('long'); document.getElementById('bookShort').innerHTML = side('short');
+    document.getElementById('liveLine').innerHTML = liveLine();
+  }
+  async function loadLive(){
+    try {
+      const r = await fetch('https://api.glassbox.gripe/prices', {cache: 'no-store'});
+      const j = await r.json();
+      if (j.ok) { live = j; renderBook(); }
+    } catch (e) { /* keep showing daily closes */ }
   }
 
   const hist = D.history.slice().reverse();
@@ -197,11 +223,12 @@ details.how ul{margin:10px 0 0;padding-left:20px;display:grid;gap:6px;max-width:
       <h2>This week's positions${wk ? ' · week of ' + fmtDate(wk) : ''}</h2>
       ${D.book.length ? `<span class="muted" style="font-size:13px">Published ${esc(D.book[0].published)} UTC · <a href="${D.repo}/commits/main/lab/positions.csv" target="_blank" rel="noopener">see the commit</a></span>` : ''}
     </div>
+    ${D.book.length ? `<p class="live" id="liveLine" aria-live="polite">${liveLine()}</p>` : ''}
     <div class="book">
-      <div class="panel"><h3><span class="side long">Long</span> · bets these keep rising</h3>${side('long')}</div>
-      <div class="panel"><h3><span class="side short">Short</span> · bets these keep falling</h3>${side('short')}</div>
+      <div class="panel"><h3><span class="side long">Long</span> · bets these keep rising</h3><div id="bookLong">${side('long')}</div></div>
+      <div class="panel"><h3><span class="side short">Short</span> · bets these keep falling</h3><div id="bookShort">${side('short')}</div></div>
     </div>
-    <p class="muted" style="font-size:13px">Entry is the Monday daily close (00:00 UTC). Price move and P&amp;L are from that close to the latest one, before costs. This week's sizes add up to ${usd0(gross * D.bankroll)}, half long and half short. It's usually less than the full ${bank} because a coin can be long in one book and short in another (strong over 30 days, weak over 14), and those cancel out.</p>
+    <p class="muted" style="font-size:13px">Entry is the Monday daily close (00:00 UTC). Price move and P&amp;L are from that close to the live price, before costs. This week's sizes add up to ${usd0(gross * D.bankroll)}, half long and half short. It's usually less than the full ${bank} because a coin can be long in one book and short in another (strong over 30 days, weak over 14), and those cancel out.</p>
   </section>
 
   <section class="panel" aria-label="Weekly results">
@@ -237,5 +264,7 @@ details.how ul{margin:10px 0 0;padding-left:20px;display:grid;gap:6px;max-width:
     <div><b>Not financial advice, and not a signals service.</b> This is a research log with no real money. Nothing here is connected to the Glass Box coin. Perpetual futures are leveraged derivatives that can lose money fast, and many countries restrict them for retail traders.</div>
     <div>Data last updated ${esc(D.status.updated_utc || '–')} UTC. We check for new daily prices twice a day.</div>
   </footer>`;
+
+  if (D.book.length) { loadLive(); setInterval(loadLive, 60000); }
 })();
 </script>
