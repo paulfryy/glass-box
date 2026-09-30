@@ -46,24 +46,31 @@ def u64(b, o):
     return struct.unpack_from("<Q", b, o)[0]
 
 
+def helius(key, method, params, timeout=90, attempts=5):
+    """One Helius JSON-RPC call, retried on error responses and on dropped connections."""
+    last = None
+    for attempt in range(attempts):
+        try:
+            r = requests.post(f"https://mainnet.helius-rpc.com/?api-key={key}", timeout=timeout,
+                              json={"jsonrpc": "2.0", "id": 1, "method": method, "params": params})
+            if r.status_code == 200 and "result" in r.json():
+                return r.json()["result"]
+            last = f"{r.status_code} {r.text[:200]}"
+        except (requests.RequestException, ValueError) as e:     # connection reset, timeout, bad JSON
+            last = repr(e)
+        time.sleep(2 ** attempt)
+    raise RuntimeError(f"Helius {method} failed after {attempts} attempts: {last}")
+
+
 def rpc_txs(key, address, t_start, t_end, max_pages):
     """All successful txs touching `address` in [t_start, t_end], oldest first (10 credits/page)."""
-    url = f"https://mainnet.helius-rpc.com/?api-key={key}"
     opts = {"transactionDetails": "full", "sortOrder": "asc", "limit": 100, "encoding": "json",
             "maxSupportedTransactionVersion": 1,
             "filters": {"blockTime": {"gte": int(t_start), "lte": int(t_end)}, "status": "succeeded"}}
     out, token = [], None
     for _ in range(max_pages):
         o = dict(opts, **({"paginationToken": token} if token else {}))
-        for attempt in range(5):
-            r = requests.post(url, json={"jsonrpc": "2.0", "id": 1, "method": "getTransactionsForAddress",
-                                         "params": [address, o]}, timeout=90)
-            if r.status_code == 200 and "result" in r.json():
-                break
-            time.sleep(2 ** attempt)
-        else:
-            raise RuntimeError(f"Helius error: {r.status_code} {r.text[:200]}")
-        res = r.json()["result"]
+        res = helius(key, "getTransactionsForAddress", [address, o])
         out += res.get("data") or []
         token = res.get("paginationToken")
         if not token or not res.get("data"):
@@ -72,9 +79,7 @@ def rpc_txs(key, address, t_start, t_end, max_pages):
 
 
 def rpc(key, method, params):
-    r = requests.post(f"https://mainnet.helius-rpc.com/?api-key={key}",
-                      json={"jsonrpc": "2.0", "id": 1, "method": method, "params": params}, timeout=60)
-    return r.json().get("result")
+    return helius(key, method, params, timeout=60)
 
 
 def events(tx):
