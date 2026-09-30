@@ -279,7 +279,7 @@ details.how ul{margin:10px 0 0;padding-left:20px;display:grid;gap:6px;max-width:
   <section class="intro">
     <div class="label">Momentum lab · public research log</div>
     <h1>Can a simple momentum rule beat memecoins?</h1>
-    <p>We're testing one trading rule in public with a ${bank} paper account (no real money). Each week it bets on the memecoins that have been rising and against the ones that have been falling. Every week's positions are <a href="${D.repo}/commits/main/lab/positions.csv" target="_blank" rel="noopener">published to GitHub</a> before the week plays out, and losing weeks stay up.</p>
+    <p>We're testing one trading rule in public with a ${bank} paper account (no real money). Each week it bets on the memecoins that have been rising and against the ones that have been falling. Every week's positions are <a href="${D.repo}/commits/main/lab/positions.csv" target="_blank" rel="noopener">published to GitHub</a> and stamped into Bitcoin early in the week, and losing weeks stay up.</p>
   </section>
 
   <section class="panel" aria-label="Paper account">
@@ -355,7 +355,7 @@ details.how ul{margin:10px 0 0;padding-left:20px;display:grid;gap:6px;max-width:
         <td>${p.bitcoin_block ? 'block ' + Number(p.bitcoin_block).toLocaleString('en-US') + ' ✓' : 'pending'}</td>
         <td><a href="${raw(p.week + '.csv')}">positions</a> · <a href="${raw(p.week + '.csv.ots')}">.ots proof</a>${p.run_url ? ` · <a href="${esc(p.run_url)}" target="_blank" rel="noopener">run log</a>` : ''}</td></tr>`).join('')}
     </tbody></table></div>
-    <p class="muted" style="font-size:13px;margin:8px 0 0">Week 1 (Sep 28) was published by hand at the start of the experiment, so it has no automated run log. Its positions were committed at 12:39 UTC on Sep 29 and Bitcoin-stamped at 16:38 UTC, about 13 and 17 hours into the week. From week 2 on, publishing, stamping and committing happen in one automated run right after the Monday close.</p>` : ''}
+    <p class="muted" style="font-size:13px;margin:8px 0 0">Week 1 (Sep 28) was published by hand at the start of the experiment, so it has no automated run log. Its positions were committed at 12:39 UTC on Sep 29 and Bitcoin-stamped at 16:38 UTC, about 13 and 17 hours into the week. From week 2 on, publishing, stamping and committing happen in one automated run about 9 hours after the Monday close: that's when Binance releases the day's data (around 08:20 UTC). The positions depend only on prices up to the Monday close, so they can't use anything that happened later, and the stamp shows they weren't changed afterwards.</p>` : ''}
   </details>
 
   <details class="how">
@@ -372,7 +372,7 @@ details.how ul{margin:10px 0 0;padding-left:20px;display:grid;gap:6px;max-width:
 
   <footer class="foot">
     <div><b>Not financial advice, and not a signals service.</b> This is a research log with no real money. Nothing here is connected to the Glass Box coin. Perpetual futures are leveraged derivatives that can lose money fast, and many countries restrict them for retail traders.</div>
-    <div>Official data last updated ${esc(upd)}. We check for new daily prices twice a day; live prices refresh every minute.</div>
+    <div>Official data last updated ${esc(upd)}. New daily closes arrive around 09:20 UTC; live prices refresh every minute.</div>
   </footer>`;
 
   if (D.book.length) { loadLive(); setInterval(loadLive, 60000); }

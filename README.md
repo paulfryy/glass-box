@@ -16,7 +16,7 @@ from 2026-09-28. No real money, not advice.
 - `lab/m1.py` pulls new daily candles and funding from Binance's free archive (data.binance.vision),
   appends each new Monday's positions to `lab/positions.csv` (never rewritten: its commit history is the
   timestamped record), and writes `lab/equity.csv`. Run by the "Momentum lab" workflow, which the
-  Worker's cron starts at 01:20 and 13:20 UTC.
+  Worker's cron starts at 09:20 and 21:20 UTC (Binance publishes each daily file around 08:20 UTC).
 - `lab/render.py` builds `public/lab/index.html` from those committed files (stdlib only) inside the
   10-minute "Refresh dashboard" job.
 - `lab/universe.yaml` is the frozen coin list. Nothing about the rule is re-tuned.

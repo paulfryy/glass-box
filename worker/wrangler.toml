@@ -8,7 +8,7 @@ routes = [{ pattern = "api.glassbox.gripe", custom_domain = true }]
 
 # Secret (not in this file): HELIUS_API_KEY  ->  npx wrangler secret put HELIUS_API_KEY
 
-# Rebuild the coin dashboard every 10 minutes, and run the Momentum lab update at 01:20 and
-# 13:20 UTC (both start GitHub Actions via GITHUB_TOKEN; see scheduled() in src/index.js)
+# Rebuild the coin dashboard every 10 minutes, and run the Momentum lab update at 09:20 and
+# 21:20 UTC, after Binance publishes the daily file ~08:20 UTC (both start GitHub Actions via GITHUB_TOKEN; see scheduled() in src/index.js)
 [triggers]
-crons = ["*/10 * * * *", "20 1,13 * * *"]
+crons = ["*/10 * * * *", "20 9,21 * * *"]

@@ -208,8 +208,9 @@ async function triggerRebuild(env, workflow = "update.yml") {
   if (r.status !== 204) console.log(workflow, "trigger failed", r.status, (await r.text()).slice(0, 200));
 }
 
-// Momentum lab: Binance publishes each day's candle shortly after 00:00 UTC; check twice a day.
-const LAB_CRON = "20 1,13 * * *";
+// Momentum lab: Binance's archive publishes each day's candle around 08:20 UTC the next day;
+// check at 09:20, with a 21:20 retry in case it's late.
+const LAB_CRON = "20 9,21 * * *";
 
 // ---------- Momentum lab: live prices (GET /prices) ----------
 // Indicative only: the lab's official results use Binance daily closes, but Binance's live API
