@@ -1,121 +1,22 @@
-<title>Momentum Lab · Glass Box</title>
-<meta name="description" content="A public, pre-registered paper-trading test of one memecoin momentum rule. Positions are committed before each week plays out; losses stay up.">
+<title>Momentum Rule · Strategy Lab</title>
+<meta name="description" content="A public, pre-registered paper-trading test of one memecoin momentum rule. Positions are published and Bitcoin-timestamped each week; losses stay up.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
-:root{
-  --bg:#F2F5F3; --surface:#FFFFFF; --ink:#15201D; --muted:#5A6B66; --line:#D5DEDA;
-  --accent:#0B7A6E; --accent-soft:#DDEFEB; --pass:#2F8F5B; --pass-soft:#E1F2E8;
-  --fail:#C0392B; --fail-soft:#F8E1DE; --warn:#B86E12; --warn-soft:#F7EAD6;
-  --bar:#E4EBE8; --btc:#8A7A5C;
-  --display:"IBM Plex Sans Condensed","Arial Narrow",Arial,sans-serif;
-  --body:"IBM Plex Sans","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-  --mono:"IBM Plex Mono",ui-monospace,Consolas,"Courier New",monospace;
-}
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    color-scheme:dark;
-    --bg:#0E1614; --surface:#15201D; --ink:#E4ECE9; --muted:#9AAAA5; --line:#2A3833;
-    --accent:#3CC2B0; --accent-soft:#143530; --pass:#5CC98B; --pass-soft:#16301F;
-    --fail:#F07A6C; --fail-soft:#3A1B17; --warn:#E3A24B; --warn-soft:#3A2A12; --bar:#22302C; --btc:#C2B08A;
-  }
-}
-:root[data-theme="dark"]{
-  color-scheme:dark;
-  --bg:#0E1614; --surface:#15201D; --ink:#E4ECE9; --muted:#9AAAA5; --line:#2A3833;
-  --accent:#3CC2B0; --accent-soft:#143530; --pass:#5CC98B; --pass-soft:#16301F;
-  --fail:#F07A6C; --fail-soft:#3A1B17; --warn:#E3A24B; --warn-soft:#3A2A12; --bar:#22302C; --btc:#C2B08A;
-}
-body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
-.wrap{max-width:1080px;margin:0 auto;padding-inline:20px;padding-block:28px 56px;display:grid;gap:28px}
-h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;letter-spacing:.01em}
-h1{font-size:clamp(28px,5vw,40px);font-weight:700;line-height:1.05}
-h2{font-size:20px;font-weight:600}
-h3{font-size:16px;font-weight:600}
-p{margin:0}
-.label{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
-.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
-.muted{color:var(--muted)}
-a{color:var(--accent)}
-a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-[hidden]{display:none!important}
-
-.tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);overflow-x:auto}
-.tabs a{font-family:var(--display);font-weight:600;font-size:15px;text-decoration:none;color:var(--muted);padding:10px 14px;border-bottom:3px solid transparent;margin-bottom:-1px;white-space:nowrap}
-.tabs a[aria-current="page"]{color:var(--ink);border-bottom-color:var(--accent)}
-
-.intro{display:grid;gap:10px}
-.intro p{color:var(--muted);max-width:68ch}
-
-.evidence{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
-.ev{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:grid;gap:6px;align-content:start}
-.ev .pill{justify-self:start}
-.ev p{font-size:14px;color:var(--muted)}
-.ev b{color:var(--ink)}
-.pill{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:5px}
-.pill.pass{background:var(--pass-soft);color:var(--pass)} .pill.fail{background:var(--fail-soft);color:var(--fail)} .pill.note{background:var(--warn-soft);color:var(--warn)}
-
-.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 18px;display:grid;gap:12px;min-width:0}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px}
-.stat .v{font-family:var(--mono);font-size:24px;font-weight:500;font-variant-numeric:tabular-nums}
-.stat .s{font-size:12.5px;color:var(--muted)}
-.up{color:var(--pass)} .down{color:var(--fail)}
-
-.chart svg{width:100%;height:auto;display:block}
-.legend{display:flex;gap:16px;font-size:12.5px;color:var(--muted);flex-wrap:wrap}
-.legend i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:6px}
-
-.book{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-.tbl{overflow-x:auto}
-table{border-collapse:collapse;width:100%;font-size:13.5px}
-th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);text-align:left;font-weight:600;padding:6px 8px;border-bottom:1px solid var(--line)}
-th.r,td.num{text-align:right}
-td{padding:7px 8px;border-bottom:1px solid var(--line)}
-td.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
-.side{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
-.side.long{color:var(--pass)} .side.short{color:var(--fail)}
-.empty{color:var(--muted);font-size:14px}
-.hero-grid{display:grid;grid-template-columns:minmax(260px,1.1fr) 2fr;gap:24px;align-items:start}
-.hero{display:grid;gap:4px}
-.hero .big{font-size:clamp(34px,6vw,46px);font-weight:500;line-height:1.05;font-variant-numeric:tabular-nums}
-.hero .delta{font-family:var(--mono);font-size:17px;font-weight:500}
-.hero .s{font-size:12.5px;color:var(--muted);max-width:44ch}
-.normal{margin:0;font-size:13.5px;color:var(--muted);border-left:3px solid var(--warn);background:var(--warn-soft);padding:10px 14px;border-radius:0 8px 8px 0;max-width:90ch}
-.normal b{color:var(--ink)}
-.movers{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:baseline;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;padding:10px 14px}
-.movers > b{font-size:17px}
-.mover{font-size:13.5px;white-space:nowrap}
-td.pl{font-weight:600}
-.legend i.swatch{width:14px;height:10px;border-radius:2px;background:var(--accent);opacity:.25}
-.track{margin:0;font-size:14px}
-.stale{background:var(--fail-soft);color:var(--ink);border:1px solid var(--fail);border-radius:10px;padding:12px 16px;font-size:14px}
-.stale b{color:var(--fail)}
-a.coin{font-weight:600;color:var(--ink);text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
-a.coin:hover{color:var(--accent);text-decoration-color:currentColor}
-.term{border-bottom:1px dotted currentColor;cursor:help}
-.glossary{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px 18px;margin:0;font-size:13px}
-.glossary div{display:grid;gap:2px}
-.glossary dt{font-weight:600}
-.glossary dd{margin:0;color:var(--muted)}
-
-.checkpoints{display:grid;gap:8px}
-.cp{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:baseline;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
-.cp .when{font-family:var(--mono);font-size:13px;color:var(--muted);white-space:nowrap}
-
-details.how{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 18px}
-details.how summary{cursor:pointer;font-family:var(--display);font-weight:600;font-size:17px}
-details.how ul{margin:10px 0 0;padding-left:20px;display:grid;gap:6px;max-width:80ch}
-.foot{color:var(--muted);font-size:13px;display:grid;gap:4px;max-width:80ch}
-@media (max-width:760px){.book{grid-template-columns:1fr}.hero-grid{grid-template-columns:1fr}}
-@media (max-width:560px){.hide-sm{display:none}.wrap{padding-inline:16px}td,th{padding-inline:6px}}
+__CSS__
 </style>
 
 <div class="wrap" style="padding-block:18px 0">
   <nav class="tabs" aria-label="Sections">
     <a href="/">This coin</a>
     <a href="/#check">Check any coin</a>
-    <a href="/lab/" aria-current="page">Momentum lab</a>
+    <a href="/lab/" aria-current="page">Strategy lab</a>
+  </nav>
+  <nav class="subnav" aria-label="Strategy lab pages">
+    <a href="/lab/">Overview</a>
+    <a href="/lab/momentum/" aria-current="page">Momentum (M1)</a>
+    <a href="/lab/controls/">Controls</a>
   </nav>
 </div>
 <div class="wrap" id="lab"></div>
@@ -277,7 +178,7 @@ details.how ul{margin:10px 0 0;padding-left:20px;display:grid;gap:6px;max-width:
   document.getElementById('lab').innerHTML = `
   ${behindDays >= 2 ? `<div class="stale" role="status"><b>Official data is delayed.</b> The latest daily close we have is ${fmtDate(D.status.data_through)}, ${behindDays} days behind. The daily update may have failed; it will catch up automatically once it runs. Live prices below are unaffected.</div>` : ''}
   <section class="intro">
-    <div class="label">Momentum lab · public research log</div>
+    <div class="label">Strategy lab · candidate · public research log</div>
     <h1>Can a simple momentum rule beat memecoins?</h1>
     <p>We're testing one trading rule in public with a ${bank} paper account (no real money). Each week it bets on the memecoins that have been rising and against the ones that have been falling. Every week's positions are <a href="${D.repo}/commits/main/lab/positions.csv" target="_blank" rel="noopener">published to GitHub</a> and stamped into Bitcoin early in the week, and losing weeks stay up.</p>
   </section>

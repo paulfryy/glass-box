@@ -1,0 +1,108 @@
+<title>Strategy Lab · Glass Box</title>
+<meta name="description" content="Trading strategies tested in public with paper money: every position published and Bitcoin-timestamped, losing weeks included.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+__CSS__
+.board td a{font-weight:600}
+.board .what{display:block;color:var(--muted);font-size:12.5px;font-weight:400;margin-top:2px}
+.kind.benchmark{background:var(--warn-soft);color:var(--warn)}
+.kinds{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.soon{border:1px dashed var(--line);border-radius:12px;padding:14px 16px;display:grid;gap:6px;background:transparent}
+.soon p{margin:0;color:var(--muted);font-size:14px}
+</style>
+
+<div class="wrap" style="padding-block:18px 0">
+  <nav class="tabs" aria-label="Sections">
+    <a href="/">This coin</a>
+    <a href="/#check">Check any coin</a>
+    <a href="/lab/" aria-current="page">Strategy lab</a>
+  </nav>
+  <nav class="subnav" aria-label="Strategy lab pages">
+    <a href="/lab/" aria-current="page">Overview</a>
+    <a href="/lab/momentum/">Momentum (M1)</a>
+    <a href="/lab/controls/">Controls</a>
+  </nav>
+</div>
+<div class="wrap" id="lab"></div>
+
+<script id="data" type="application/json">__DATA__</script>
+<script>
+(function(){
+  const D = JSON.parse(document.getElementById('data').textContent);
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+  const pct = (x, d=1) => (x >= 0 ? '+' : '−') + Math.abs(x * 100).toFixed(d) + '%';
+  const cls = x => x > 0 ? 'up' : (x < 0 ? 'down' : '');
+  const usd = x => '$' + x.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  const usd0 = x => '$' + Math.round(x).toLocaleString('en-US');
+  const fmtDate = s => new Date(s + 'T00:00:00Z').toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC'});
+  const START = '2026-09-28';
+  const STYLE = {momentum: ['var(--accent)', ''], basket: ['var(--muted)', '6 4'], longonly: ['var(--warn)', ''], btc: ['var(--btc)', '']};
+
+  function chart(){
+    const n = Math.max(...D.board.map(s => s.equity.length));
+    if (n < 2) return `<p class="empty">The comparison chart starts after the second daily close. The scoreboard above updates every day.</p>`;
+    const series = D.board.map(s => ({...s, pts: [D.bankroll, ...s.equity.map(p => p.e)]}));
+    const W = 800, H = 260, pl = 60, pr = 12, pt = 12, pb = 28;
+    const vals = series.flatMap(s => s.pts);
+    let lo = Math.min(...vals), hi = Math.max(...vals);
+    const pad = (hi - lo) * 0.08 || 20; lo -= pad; hi += pad;
+    const x = i => pl + i * (W - pl - pr) / n;
+    const y = v => pt + (hi - v) * (H - pt - pb) / (hi - lo);
+    const ticks = [lo + pad, (lo + hi) / 2, hi - pad];
+    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Paper account values of every strategy since ${fmtDate(START)}">
+      ${ticks.map(t => `<line x1="${pl}" x2="${W - pr}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)" opacity=".7"/>
+        <text x="${pl - 8}" y="${y(t) + 4}" text-anchor="end" font-size="11" fill="var(--muted)" font-family="var(--mono)">${usd0(t)}</text>`).join('')}
+      <line x1="${pl}" x2="${W - pr}" y1="${y(D.bankroll)}" y2="${y(D.bankroll)}" stroke="var(--muted)" stroke-dasharray="3 4" opacity=".6"/>
+      ${series.map(s => `<polyline points="${s.pts.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ')}" fill="none" stroke="${STYLE[s.id][0]}" stroke-width="${s.id === 'momentum' ? 2.5 : 1.8}" ${STYLE[s.id][1] ? `stroke-dasharray="${STYLE[s.id][1]}"` : ''}/>`).join('')}
+      <text x="${pl}" y="${H - 8}" font-size="11" fill="var(--muted)">${fmtDate(START)}</text>
+      <text x="${W - pr}" y="${H - 8}" font-size="11" fill="var(--muted)" text-anchor="end">${fmtDate(D.board[0].equity.length ? D.board[0].equity[D.board[0].equity.length - 1].d : START)}</text>
+    </svg>`;
+  }
+
+  const ranked = D.board.slice().sort((a, b) => b.ret - a.ret);
+  document.getElementById('lab').innerHTML = `
+  <section class="intro">
+    <div class="label">Strategy lab · public research log</div>
+    <h1>Trading strategies, tested in public</h1>
+    <p>Each strategy here runs a ${usd0(D.bankroll)} paper account (no real money) from ${fmtDate(START)}, with realistic trading costs. Every week's positions are published on GitHub (the candidate's are also stamped into Bitcoin), and losing weeks stay up. Most trading claims online can't show you that.</p>
+  </section>
+
+  <section class="panel" aria-label="Scoreboard">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
+      <h2>Scoreboard</h2><span class="muted" style="font-size:13px">Official values at the ${esc(D.status.data_through ? fmtDate(D.status.data_through) : '–')} daily close (UTC)</span>
+    </div>
+    <div class="tbl"><table class="board"><thead><tr><th>Strategy</th><th>Type</th><th class="r">Value</th><th class="r">Since start</th><th class="r hide-sm">Worst drop</th></tr></thead><tbody>
+      ${ranked.map(s => `<tr><td>${s.href ? `<a href="${s.href}">${esc(s.name)}</a>` : `<b>${esc(s.name)}</b>`}<span class="what">${esc(s.what)}</span></td>
+        <td><span class="kind ${s.kind}">${s.kind}</span></td><td class="num">${usd(s.value)}</td>
+        <td class="num ${cls(s.ret)}">${pct(s.ret, 2)}</td><td class="num hide-sm">${s.worst < 0 ? pct(s.worst, 1) : '0%'}</td></tr>`).join('')}
+    </tbody></table></div>
+    <div class="chart">${chart()}</div>
+    <div class="legend">${D.board.map(s => `<span><i style="background:${STYLE[s.id][0]}"></i>${esc(s.name)}</span>`).join('')}</div>
+    <p class="normal"><b>Read this carefully:</b> a table like this invites you to back whatever is on top. Don't. With several strategies running, one of them will usually look great for a few months by luck alone. Only a candidate's result counts as evidence, judged at its checkpoints, not by rank on any given day.</p>
+  </section>
+
+  <section aria-label="What the labels mean" style="display:grid;gap:12px">
+    <h2>What the labels mean</h2>
+    <div class="kinds">
+      <div class="ev"><span class="kind candidate">candidate</span><h3>A strategy we think might work</h3><p>It passed a backtest we wrote down and fingerprinted before looking at the results. Live results are the real test.</p></div>
+      <div class="ev"><span class="kind control">control</span><h3>What a typical buyer would do</h3><p>Simple approaches we expect to do worse. They show whether a candidate is adding anything beyond just owning memecoins.</p></div>
+      <div class="ev"><span class="kind benchmark">benchmark</span><h3>Doing nothing clever</h3><p>The same money sitting in Bitcoin, for reference.</p></div>
+    </div>
+  </section>
+
+  <section aria-label="Coming next" style="display:grid;gap:12px">
+    <h2>Coming next</h2>
+    <div class="soon"><span class="kind control" style="justify-self:start">control · in preparation</span><h3>Buy every pump.fun graduate</h3>
+      <p>A live account that buys every coin the moment it graduates from pump.fun's bonding curve and sells after a fixed time, with real fees. Our research says this loses money; this will show it happening, day by day.</p></div>
+    <div class="soon"><span class="kind candidate" style="justify-self:start">candidates · must pass first</span><h3>New strategies</h3>
+      <p>A new strategy only gets a page after it passes a backtest whose rules were fixed and fingerprinted before we saw any results. Ideas that fail get written up, not hidden.</p></div>
+  </section>
+
+  <footer class="foot">
+    <div><b>Not financial advice, and not a signals service.</b> This is a research log with no real money. Nothing here is connected to the Glass Box coin.</div>
+    <div>Data: Binance's free public archive, updated daily around 09:20 UTC. <a href="${D.repo}/tree/main/lab" target="_blank" rel="noopener">All code and numbers are public.</a></div>
+  </footer>`;
+})();
+</script>

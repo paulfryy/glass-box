@@ -39,6 +39,7 @@ FILES = "https://data.binance.vision/"
 START = pd.Timestamp("2026-09-28", tz="UTC")          # first Monday close traded on paper
 BANKROLL = 5000.0            # paper account size (results are the same in % terms)
 FEE_BPS, SLIP_BPS = 10, 15
+SPOT_FEE_BPS, SPOT_SLIP_BPS = 40, 30                 # controls: what a typical spot buyer pays
 BOOKS = [(14, 3), (14, 5), (30, 3), (30, 5)]
 MIN_AGE, MIN_ADV = 14, 2e6
 
@@ -174,30 +175,84 @@ def norm(S, cap):
     return S.div(n, axis=0).clip(-cap, cap).fillna(0.0)
 
 
-def book(C, E, L, k):
+def weekly(S, E):
+    """Hold Monday's signal all week (coins that stop qualifying mid-week are dropped)."""
+    monday = pd.Series(S.index.dayofweek == 0, index=S.index)
+    return S.where(monday, np.nan).ffill().fillna(0.0).where(E, 0.0)
+
+
+def book(C, E, L, k, long_short=True):
     ret = C.pct_change(L, fill_method=None).where(E)
     S = pd.DataFrame(0.0, index=C.index, columns=C.columns)
     S[ret.rank(axis=1, ascending=False) <= k] = 1.0
-    S[(ret.rank(axis=1, ascending=True) <= k) & (S == 0)] = -1.0
-    S = S.where(E, 0.0)
-    monday = pd.Series(S.index.dayofweek == 0, index=S.index)
-    S = S.where(monday, np.nan).ffill().fillna(0.0).where(E, 0.0)
-    return norm(S, cap=0.5 / k)
+    if long_short:
+        S[(ret.rank(axis=1, ascending=True) <= k) & (S == 0)] = -1.0
+    S = weekly(S.where(E, 0.0), E)
+    return norm(S, cap=0.5 / k if long_short else 1.0 / k)
 
 
 def weights(C, E):
+    """M1: equal blend of the four long/short books."""
     return sum(book(C, E, L, k) for L, k in BOOKS) / len(BOOKS)
 
 
-def run(W, C, F):
+# ---------------------------------------------------------------- controls (not candidates: expected to do worse)
+def long_only(C, E):
+    """M1's four books with the shorts removed, fully invested (report 12's L1)."""
+    return sum(book(C, E, L, k, long_short=False) for L, k in BOOKS) / len(BOOKS)
+
+
+def basket(C, E):
+    """'Just buy memecoins': equal weight in every eligible coin, re-set weekly."""
+    return norm(weekly(E.astype(float), E), cap=1.0)
+
+
+CONTROLS = {   # id -> (weights, fee bps, slippage bps, pay funding?)
+    "basket": (basket, SPOT_FEE_BPS, SPOT_SLIP_BPS, False),
+    "longonly": (long_only, SPOT_FEE_BPS, SPOT_SLIP_BPS, False),
+}
+
+
+def run(W, C, F, fee_bps=FEE_BPS, slip_bps=SLIP_BPS, funding=True):
     W = W.reindex_like(C).fillna(0.0)
     R = C.pct_change(fill_method=None).shift(-1).fillna(0.0)
     Fn = F.reindex_like(C).fillna(0.0).shift(-1).fillna(0.0)
     gross = (W * R).sum(axis=1)
-    fund = -(W * Fn).sum(axis=1)
+    fund = -(W * Fn).sum(axis=1) if funding else pd.Series(0.0, index=W.index)
     drift = (W * (1 + R)).div((1 + (W * R).sum(axis=1)).replace(0, np.nan), axis=0).shift(1).fillna(0.0)
-    cost = (W - drift).abs().sum(axis=1) * (FEE_BPS + SLIP_BPS) / 1e4
+    cost = (W - drift).abs().sum(axis=1) * (fee_bps + slip_bps) / 1e4
     return pd.DataFrame({"gross": gross, "funding": fund, "cost": cost, "net": gross + fund - cost})
+
+
+# ---------------------------------------------------------------- outputs
+def publish(W, C, pos_path, stamp):
+    """Append each new Monday close's positions to pos_path (published rows are never rewritten)."""
+    pos = pd.read_csv(pos_path) if os.path.exists(pos_path) else pd.DataFrame(
+        columns=["week", "symbol", "side", "weight", "entry_close", "published_utc"])
+    done = set(pos["week"].astype(str))
+    add = []
+    for m in W.index[(W.index.dayofweek == 0) & (W.index >= START)]:
+        if f"{m:%Y-%m-%d}" in done:
+            continue
+        w = W.loc[m][W.loc[m].abs() > 1e-9].sort_values(ascending=False)
+        add += [{"week": f"{m:%Y-%m-%d}", "symbol": s, "side": "long" if x > 0 else "short",
+                 "weight": round(float(x), 6), "entry_close": float(C.loc[m, s]), "published_utc": stamp} for s, x in w.items()]
+    if add:
+        os.makedirs(os.path.dirname(pos_path), exist_ok=True)
+        pd.concat([pos, pd.DataFrame(add)], ignore_index=True).to_csv(pos_path, index=False, lineterminator="\n")
+        print(f"{os.path.relpath(pos_path, HERE)}: published {sorted({r['week'] for r in add})}")
+
+
+def account(W, C, F, btc, path, **costs):
+    """Paper account since START (row t = return from close t to close t+1; the newest row has none yet)."""
+    r = run(W[W.index >= START], C[C.index >= START], F[F.index >= START], **costs).iloc[:-1]
+    b = btc.pct_change(fill_method=None).shift(-1).reindex(r.index).fillna(0.0)
+    eq = pd.DataFrame({"date": [f"{d + pd.Timedelta(days=1):%Y-%m-%d}" for d in r.index],   # value AT that close
+                       "gross": r["gross"].round(6), "funding": r["funding"].round(6), "cost": r["cost"].round(6),
+                       "net": r["net"].round(6), "equity": (BANKROLL * (1 + r["net"]).cumprod()).round(2),
+                       "btc_equity": (BANKROLL * (1 + b).cumprod()).round(2)})
+    eq.to_csv(path, index=False, lineterminator="\n")
+    return eq
 
 
 # ---------------------------------------------------------------- main
@@ -217,32 +272,16 @@ def main():
     E = live_eligible(C, V)
     W = weights(C, E)
 
-    # 1. positions: append each new Monday close (never rewrite published rows)
-    pos_path = os.path.join(HERE, "positions.csv")
-    pos = pd.read_csv(pos_path) if os.path.exists(pos_path) else pd.DataFrame(
-        columns=["week", "symbol", "side", "weight", "entry_close", "published_utc"])
-    done = set(pos["week"].astype(str))
     stamp = pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%d %H:%M")
-    add = []
-    for m in W.index[(W.index.dayofweek == 0) & (W.index >= START)]:
-        if f"{m:%Y-%m-%d}" in done:
-            continue
-        w = W.loc[m][W.loc[m].abs() > 1e-9].sort_values(ascending=False)
-        add += [{"week": f"{m:%Y-%m-%d}", "symbol": s, "side": "long" if x > 0 else "short",
-                 "weight": round(float(x), 6), "entry_close": float(C.loc[m, s]), "published_utc": stamp} for s, x in w.items()]
-    if add:
-        pos = pd.concat([pos, pd.DataFrame(add)], ignore_index=True)
-        pos.to_csv(pos_path, index=False)
-        print(f"published positions for {sorted({r['week'] for r in add})}")
-
-    # 2. paper account since START (row t = return from close t to close t+1; the newest row has none yet)
-    r = run(W[W.index >= START], C[C.index >= START], F[F.index >= START]).iloc[:-1]
-    b = btc.pct_change(fill_method=None).shift(-1).reindex(r.index).fillna(0.0)
-    eq = pd.DataFrame({"date": [f"{d + pd.Timedelta(days=1):%Y-%m-%d}" for d in r.index],   # value AT that close
-                       "gross": r["gross"].round(6), "funding": r["funding"].round(6), "cost": r["cost"].round(6),
-                       "net": r["net"].round(6), "equity": (BANKROLL * (1 + r["net"]).cumprod()).round(2),
-                       "btc_equity": (BANKROLL * (1 + b).cumprod()).round(2)})
-    eq.to_csv(os.path.join(HERE, "equity.csv"), index=False)
+    # 1. M1 (the candidate): positions + paper account
+    publish(W, C, os.path.join(HERE, "positions.csv"), stamp)
+    eq = account(W, C, F, btc, os.path.join(HERE, "equity.csv"))
+    # 2. controls: same data and start date, spot costs, no funding
+    for cid, (fn, fee, slip, fund) in CONTROLS.items():
+        Wc = fn(C, E)
+        publish(Wc, C, os.path.join(HERE, "controls", cid, "positions.csv"), stamp)
+        ec = account(Wc, C, F, btc, os.path.join(HERE, "controls", cid, "equity.csv"), fee_bps=fee, slip_bps=slip, funding=fund)
+        print(f"control {cid}: ${ec['equity'].iloc[-1] if len(ec) else BANKROLL:,.2f}")
     latest = {s: float(C[s].dropna().iloc[-1]) for s in C.columns if C[s].notna().any()}
     pd.Series(latest, name="close").to_csv(os.path.join(HERE, "latest.csv"), index_label="symbol")
     # status: only touch the timestamp when the data actually moved, so idle runs commit nothing
