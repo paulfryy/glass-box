@@ -224,7 +224,7 @@ const SOURCES = {
 };
 
 async function prices(ctx, origin) {
-  const cacheKey = new Request("https://cache.glassbox/lab/prices/v3");
+  const cacheKey = new Request("https://cache.glassbox/lab/prices/v4");
   const hit = await caches.default.match(cacheKey);
   if (hit) return json({ ...(await hit.json()), cached: true }, 200, origin);
   const coins = LIVE.coins, used = [...new Set(Object.values(coins).map(c => c.src))];

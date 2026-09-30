@@ -84,6 +84,11 @@ def summary(points):
     return {"value": v, "ret": v / BANKROLL - 1, "worst": dd}
 
 
+def live_book(book):
+    """What the overview needs to mark a strategy live: each coin's weight and last daily close."""
+    return [{"coin": p["coin"], "weight": p["weight"] if p["side"] == "long" else -abs(p["weight"]), "now": p["now"]} for p in book]
+
+
 def write(template, data, *out):
     css = open(os.path.join(HERE, "common.css"), encoding="utf-8").read()
     tpl = open(os.path.join(HERE, template), encoding="utf-8").read().replace("__CSS__", css)
@@ -131,12 +136,13 @@ def main():
     btc = [{"d": p["d"], "e": p["b"]} for p in m1_points]
     board = [{"id": "momentum", "name": "Momentum rule (M1)", "kind": "candidate", "href": "/lab/momentum/",
               "what": "Bets on the memecoins that have been rising and against the ones that have been falling.",
-              "weeks": len(weeks), "equity": m1_points, **summary(m1_points)}]
+              "weeks": len(weeks), "equity": m1_points, "book": live_book(book), **summary(m1_points)}]
     board += [{"id": c["id"], "name": c["name"], "kind": "control", "href": "/lab/controls/", "what": c["what"],
-               "weeks": len(c["weeks"]), "equity": c["equity"], **summary(c["equity"])} for c in controls]
+               "weeks": len(c["weeks"]), "equity": c["equity"], "book": live_book(c["book"]), **summary(c["equity"])} for c in controls]
     board.append({"id": "btc", "name": "Buy and hold BTC", "kind": "benchmark", "href": None,
                   "what": "For reference: what the same money would do sitting in Bitcoin.",
-                  "weeks": len(weeks), "equity": btc, **summary(btc)})
+                  "weeks": len(weeks), "equity": btc, "book": [{"coin": "BTC", "weight": 1.0, "now": latest.get("BTCUSDT")}],
+                  **summary(btc)})
     write("overview.html", {"status": st, "bankroll": BANKROLL, "repo": REPO, "board": board}, )
 
     print(f"built public/lab (overview, momentum, controls): {len(weeks)} week(s), {len(eq)} day(s) of results "

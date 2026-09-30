@@ -225,6 +225,11 @@
    "src": "gate",
    "sym": "ZEREBRO_USDT",
    "mult": 1
+  },
+  "BTCUSDT": {
+   "src": "gate",
+   "sym": "BTC_USDT",
+   "mult": 1
   }
  },
  "unavailable": [

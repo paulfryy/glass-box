@@ -61,7 +61,34 @@ __CSS__
     </svg>`;
   }
 
-  const ranked = D.board.slice().sort((a, b) => b.ret - a.ret);
+  // live estimates: official value at the last daily close, moved by each position's change since that close
+  let live = null;
+  const localTime = ms => { const d = new Date(ms);
+    return `${d.toLocaleString('en-US', {hour: 'numeric', minute: '2-digit', timeZoneName: 'short'})} (${d.toISOString().slice(11, 16)} UTC)`; };
+  const liveValue = s => { if (!live) return null;
+    let move = 0, n = 0;
+    for (const p of s.book || []) { const lp = live.prices[p.coin + 'USDT']; if (lp && p.now) { move += p.weight * (lp / p.now - 1); n++; } }
+    return n ? s.value * (1 + move) : null; };
+  function board(){
+    const rows = D.board.map(s => { const v = liveValue(s); return {...s, lv: v ?? s.value, isLive: v != null}; })
+      .sort((a, b) => b.lv - a.lv);
+    return `<table class="board"><thead><tr><th>Strategy</th><th>Type</th><th class="r">${live ? 'Right now' : 'Value'}</th><th class="r">Since start</th><th class="r hide-sm">Worst drop</th></tr></thead><tbody>
+      ${rows.map(s => { const r = s.lv / D.bankroll - 1;
+        return `<tr><td>${s.href ? `<a href="${s.href}">${esc(s.name)}</a>` : `<b>${esc(s.name)}</b>`}<span class="what">${esc(s.what)}</span></td>
+        <td><span class="kind ${s.kind}">${s.kind}</span></td>
+        <td class="num">${usd(s.lv)}${s.isLive ? `<span class="what">official ${usd(s.value)}</span>` : ''}</td>
+        <td class="num ${cls(r)}">${pct(r, 2)}</td><td class="num hide-sm">${s.worst < 0 ? pct(s.worst, 1) : '0%'}</td></tr>`; }).join('')}
+    </tbody></table>`;
+  }
+  async function loadLive(){
+    try {
+      const j = await (await fetch('https://api.glassbox.gripe/prices', {cache: 'no-store'})).json();
+      if (!j.ok) return;
+      live = j;
+      document.getElementById('board').innerHTML = board();
+      document.getElementById('boardTime').textContent = `Live estimate at ${localTime(j.asOf * 1000)}, refreshed every minute. Official values use Binance daily closes.`;
+    } catch (e) { /* keep the daily-close values */ }
+  }
   document.getElementById('lab').innerHTML = `
   <section class="intro">
     <div class="label">Strategy lab · public research log</div>
@@ -71,13 +98,9 @@ __CSS__
 
   <section class="panel" aria-label="Scoreboard">
     <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
-      <h2>Scoreboard</h2><span class="muted" style="font-size:13px">Official values at the ${esc(D.status.data_through ? fmtDate(D.status.data_through) : '–')} daily close (UTC)</span>
+      <h2>Scoreboard</h2><span class="muted" style="font-size:13px" id="boardTime">Values at the ${esc(D.status.data_through ? fmtDate(D.status.data_through) : '–')} daily close (UTC) · live prices loading…</span>
     </div>
-    <div class="tbl"><table class="board"><thead><tr><th>Strategy</th><th>Type</th><th class="r">Value</th><th class="r">Since start</th><th class="r hide-sm">Worst drop</th></tr></thead><tbody>
-      ${ranked.map(s => `<tr><td>${s.href ? `<a href="${s.href}">${esc(s.name)}</a>` : `<b>${esc(s.name)}</b>`}<span class="what">${esc(s.what)}</span></td>
-        <td><span class="kind ${s.kind}">${s.kind}</span></td><td class="num">${usd(s.value)}</td>
-        <td class="num ${cls(s.ret)}">${pct(s.ret, 2)}</td><td class="num hide-sm">${s.worst < 0 ? pct(s.worst, 1) : '0%'}</td></tr>`).join('')}
-    </tbody></table></div>
+    <div class="tbl" id="board">${board()}</div>
     <div class="chart">${chart()}</div>
     <div class="legend">${D.board.map(s => `<span><i style="background:${STYLE[s.id][0]}"></i>${esc(s.name)}</span>`).join('')}</div>
     <p class="normal"><b>Read this carefully:</b> a table like this invites you to back whatever is on top. Don't. With several strategies running, one of them will usually look great for a few months by luck alone. Only a candidate's result counts as evidence, judged at its checkpoints, not by rank on any given day.</p>
@@ -104,5 +127,7 @@ __CSS__
     <div><b>Not financial advice, and not a signals service.</b> This is a research log with no real money. Nothing here is connected to the Glass Box coin.</div>
     <div>Data: Binance's free public archive, updated daily around 09:20 UTC. <a href="${D.repo}/tree/main/lab" target="_blank" rel="noopener">All code and numbers are public.</a></div>
   </footer>`;
+
+  loadLive(); setInterval(loadLive, 60000);
 })();
 </script>

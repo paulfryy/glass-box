@@ -283,6 +283,7 @@ def main():
         ec = account(Wc, C, F, btc, os.path.join(HERE, "controls", cid, "equity.csv"), fee_bps=fee, slip_bps=slip, funding=fund)
         print(f"control {cid}: ${ec['equity'].iloc[-1] if len(ec) else BANKROLL:,.2f}")
     latest = {s: float(C[s].dropna().iloc[-1]) for s in C.columns if C[s].notna().any()}
+    latest["BTCUSDT"] = float(btc.dropna().iloc[-1])          # for the live BTC benchmark on the overview
     pd.Series(latest, name="close").to_csv(os.path.join(HERE, "latest.csv"), index_label="symbol")
     # status: only touch the timestamp when the data actually moved, so idle runs commit nothing
     sp = os.path.join(HERE, "status.txt")
