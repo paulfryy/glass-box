@@ -57,7 +57,17 @@ details.hold summary{cursor:pointer;font-family:var(--display);font-weight:600;f
     return `<div class="label">${live ? 'Right now · live estimate' : 'At the last daily close'}</div>
       <div class="big mono">${usd(v)}</div>
       <div class="row"><span class="mono ${cls(r)}"><b>${pct(r, 2)}</b> since ${fmtDate(START)}</span><span class="muted">Worst drop ${c.worst < 0 ? pct(c.worst, 1) : '0%'}</span>
-        <span class="muted">Official: ${usd(c.value)}</span></div>`;
+        <span class="muted">Official: ${usd(c.value)}</span></div>${bridge(c, v)}`;
+  }
+  // positions' P&L (before costs) + trading costs = the account's change this week
+  function bridge(c, v){
+    const wk = c.weeks[c.weeks.length - 1], h = (c.history || []).find(x => x.week === wk);
+    if (!h) return `<div class="bridge">Trading costs for this week appear after its first daily close.</div>`;
+    const pos = c.book.reduce((t, p) => t + pnl(c, p), 0), cost = -h.cost * weekBase(c), acct = v - weekBase(c);
+    return `<div class="bridge" title="The holdings table uses Monday's sizes all week; the account also re-sizes positions at each daily close, so the parts can differ from the total by a few dollars. No funding: these controls buy coins outright.">
+      <span>This week: positions <b class="mono ${cls(pos)}">${sgn$(pos)}</b></span><span>·</span>
+      <span>trading costs <b class="mono ${cls(cost)}">${sgn$(cost)}</b></span><span>=</span>
+      <span>account <b class="mono ${cls(acct)}">${sgn$(acct)}</b>${live ? ' (live)' : ''}</span></div>`;
   }
   function holdings(c){
     if (!c.book.length) return '<p class="empty">No positions yet.</p>';
