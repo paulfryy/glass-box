@@ -113,3 +113,5 @@ details.how ul{margin:10px 0 0;padding-left:20px;display:grid;gap:6px;max-width:
 .sidesum b{font-size:16px}
 .bridge{flex-basis:100%;display:flex;flex-wrap:wrap;gap:4px 8px;font-size:13px;color:var(--muted);border-top:1px dashed var(--line);padding-top:8px;margin-top:2px}
 .bridge b{font-size:13.5px}
+.legend span{display:inline-flex;align-items:center}
+.legend svg.key{flex:none;margin-right:6px;overflow:visible}

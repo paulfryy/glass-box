@@ -48,6 +48,8 @@ __CSS__
   const START = '2026-09-28';
   const STYLE = {momentum: ['var(--accent)', ''], basket: ['var(--muted)', '6 4'], longonly: ['var(--warn)', ''], btc: ['var(--btc)', '']};
 
+  // legend key: a short line drawn exactly like the chart's line (colour, width, dashes)
+  const key = (color, w, dash) => `<svg class="key" width="26" height="10" aria-hidden="true"><line x1="1" y1="5" x2="25" y2="5" stroke="${color}" stroke-width="${w}" ${dash ? `stroke-dasharray="${dash}"` : ''} stroke-linecap="round"/></svg>`;
   let G = null;   // chart geometry, kept for the hover crosshair
   function chart(){
     const n = Math.max(...D.board.map(s => s.equity.length));
@@ -147,7 +149,7 @@ __CSS__
     </div>
     <div class="tbl" id="board">${board()}</div>
     <div class="chart">${chart()}</div>
-    <div class="legend">${D.board.map(s => `<span><i style="background:${STYLE[s.id][0]}"></i>${esc(s.name)}</span>`).join('')}</div>
+    <div class="legend">${D.board.map(s => `<span>${key(STYLE[s.id][0], s.id === 'momentum' ? 2.5 : 1.8, STYLE[s.id][1])}${esc(s.name)}</span>`).join('')}</div>
     <p class="normal"><b>Read this carefully:</b> a table like this invites you to back whatever is on top. Don't. With several strategies running, one of them will usually look great for a few months by luck alone. Only a candidate's result counts as evidence, judged at its checkpoints, not by rank on any given day.</p>
   </section>
 
