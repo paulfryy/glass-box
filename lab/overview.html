@@ -11,6 +11,14 @@ __CSS__
 .kinds{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
 .soon{border:1px dashed var(--line);border-radius:12px;padding:14px 16px;display:grid;gap:6px;background:transparent}
 .soon p{margin:0;color:var(--muted);font-size:14px}
+.chart{position:relative}
+.chart svg{touch-action:pan-y}
+.tip{position:absolute;z-index:2;pointer-events:none;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12.5px;box-shadow:0 4px 14px rgba(0,0,0,.12);display:grid;gap:4px;min-width:250px}
+.tip[hidden]{display:none}
+.tip-date{font-weight:600;color:var(--ink);margin-bottom:2px}
+.tip-row{display:grid;grid-template-columns:12px 1fr auto auto;gap:8px;align-items:center}
+.tip-row i{width:10px;height:3px;border-radius:2px}
+.tip-row b{font-weight:500}
 </style>
 
 <div class="wrap" style="padding-block:18px 0">
@@ -40,6 +48,7 @@ __CSS__
   const START = '2026-09-28';
   const STYLE = {momentum: ['var(--accent)', ''], basket: ['var(--muted)', '6 4'], longonly: ['var(--warn)', ''], btc: ['var(--btc)', '']};
 
+  let G = null;   // chart geometry, kept for the hover crosshair
   function chart(){
     const n = Math.max(...D.board.map(s => s.equity.length));
     if (n < 2) return `<p class="empty">The comparison chart starts after the second daily close. The scoreboard above updates every day.</p>`;
@@ -51,14 +60,50 @@ __CSS__
     const x = i => pl + i * (W - pl - pr) / n;
     const y = v => pt + (hi - v) * (H - pt - pb) / (hi - lo);
     const ticks = [lo + pad, (lo + hi) / 2, hi - pad];
-    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Paper account values of every strategy since ${fmtDate(START)}">
+    const dates = [START, ...D.board[0].equity.map(p => p.d)];
+    G = {series, n, x, y, W, H, pl, pr, pt, pb, dates};
+    return `<svg id="ovChart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Paper account values of every strategy since ${fmtDate(START)}. Hover or tap for values on a given day.">
       ${ticks.map(t => `<line x1="${pl}" x2="${W - pr}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)" opacity=".7"/>
         <text x="${pl - 8}" y="${y(t) + 4}" text-anchor="end" font-size="11" fill="var(--muted)" font-family="var(--mono)">${usd0(t)}</text>`).join('')}
       <line x1="${pl}" x2="${W - pr}" y1="${y(D.bankroll)}" y2="${y(D.bankroll)}" stroke="var(--muted)" stroke-dasharray="3 4" opacity=".6"/>
       ${series.map(s => `<polyline points="${s.pts.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ')}" fill="none" stroke="${STYLE[s.id][0]}" stroke-width="${s.id === 'momentum' ? 2.5 : 1.8}" ${STYLE[s.id][1] ? `stroke-dasharray="${STYLE[s.id][1]}"` : ''}/>`).join('')}
       <text x="${pl}" y="${H - 8}" font-size="11" fill="var(--muted)">${fmtDate(START)}</text>
       <text x="${W - pr}" y="${H - 8}" font-size="11" fill="var(--muted)" text-anchor="end">${fmtDate(D.board[0].equity.length ? D.board[0].equity[D.board[0].equity.length - 1].d : START)}</text>
-    </svg>`;
+      <g id="ovHover" visibility="hidden">
+        <line id="ovGuide" y1="${pt}" y2="${H - pb}" stroke="var(--muted)" stroke-width="1" stroke-dasharray="2 3"/>
+        ${series.map(s => `<circle data-id="${s.id}" r="4" fill="${STYLE[s.id][0]}" stroke="var(--surface)" stroke-width="1.5"/>`).join('')}
+      </g>
+      <rect x="${pl}" y="${pt}" width="${W - pl - pr}" height="${H - pt - pb}" fill="transparent" style="cursor:crosshair"/>
+    </svg><div class="tip" id="ovTip" hidden></div>`;
+  }
+  // hover / tap crosshair: snap to the nearest daily close and list every strategy's value there
+  function attachHover(){
+    const svg = document.getElementById('ovChart'), tip = document.getElementById('ovTip');
+    if (!svg || !G) return;
+    const hoverG = document.getElementById('ovHover'), guide = document.getElementById('ovGuide');
+    const show = e => {
+      const r = svg.getBoundingClientRect();
+      const vx = (e.clientX - r.left) / r.width * G.W;
+      const i = Math.max(0, Math.min(G.n, Math.round((vx - G.pl) / (G.W - G.pl - G.pr) * G.n)));
+      const xi = G.x(i);
+      guide.setAttribute('x1', xi); guide.setAttribute('x2', xi);
+      hoverG.querySelectorAll('circle').forEach(c => { const s = G.series.find(z => z.id === c.dataset.id);
+        const v = s.pts[Math.min(i, s.pts.length - 1)]; c.setAttribute('cx', xi); c.setAttribute('cy', G.y(v)); });
+      hoverG.setAttribute('visibility', 'visible');
+      const rows = G.series.map(s => ({s, v: s.pts[Math.min(i, s.pts.length - 1)]})).sort((a, b) => b.v - a.v);
+      tip.innerHTML = `<div class="tip-date">${i === 0 ? 'Start · ' : ''}${fmtDate(G.dates[i])} close (UTC)</div>` +
+        rows.map(({s, v}) => `<div class="tip-row"><i style="background:${STYLE[s.id][0]}"></i><span>${esc(s.name)}</span>
+          <b class="mono">${usd(v)}</b><span class="mono ${cls(v / D.bankroll - 1)}">${pct(v / D.bankroll - 1, 1)}</span></div>`).join('');
+      tip.hidden = false;
+      const box = svg.parentElement.getBoundingClientRect(), px = xi / G.W * r.width + (r.left - box.left);
+      const left = px + 14 + tip.offsetWidth > box.width ? px - 14 - tip.offsetWidth : px + 14;
+      tip.style.left = Math.max(0, left) + 'px';
+      tip.style.top = Math.max(0, (e.clientY - box.top) - tip.offsetHeight / 2) + 'px';
+    };
+    const hide = () => { hoverG.setAttribute('visibility', 'hidden'); tip.hidden = true; };
+    svg.addEventListener('pointermove', show);
+    svg.addEventListener('pointerdown', show);
+    svg.addEventListener('pointerleave', hide);
   }
 
   // live estimates: official value at the last daily close, moved by each position's change since that close
@@ -128,6 +173,7 @@ __CSS__
     <div>Data: Binance's free public archive, updated daily around 09:20 UTC. <a href="${D.repo}/tree/main/lab" target="_blank" rel="noopener">All code and numbers are public.</a></div>
   </footer>`;
 
+  attachHover();
   loadLive(); setInterval(loadLive, 60000);
 })();
 </script>
