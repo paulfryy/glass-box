@@ -158,9 +158,18 @@ __CSS__
       ${missing ? `<sup>*</sup>${missing} coin${missing > 1 ? 's' : ''} without a live source show the last close.` : ''}
       This week's positions add up to ${usd0(gross * weekBase)}, half long and half short. That's usually less than the full account because a coin can be long in one of the rule's four rankings and short in another, and those cancel out.`;
   }
+  // one side's running P&L this week (before costs), for the table headers
+  function sideSum(which){
+    const rows = D.book.filter(p => p.side === which);
+    if (!rows.length) return '';
+    const v = rows.reduce((s, p) => s + pnlWeek(p), 0);
+    const size = rows.reduce((s, p) => s + Math.abs(p.weight) * weekBase, 0);
+    return `<b class="mono ${cls(v)}">${sgn$(v)}</b> <span class="muted">${size ? pct(v / size, 1) : ''} on ${usd0(size)}</span>`;
+  }
   function renderLive(){
     const set = (id, h) => { const e = document.getElementById(id); if (e) e.innerHTML = h; };
     set('hero', hero()); set('movers', movers()); set('bookLong', side('long')); set('bookShort', side('short')); set('liveNote', liveNote());
+    set('sumLong', sideSum('long')); set('sumShort', sideSum('short'));
   }
   async function loadLive(){
     try {
@@ -206,8 +215,8 @@ __CSS__
     </div>
     ${D.book.length ? `<div class="movers" id="movers" aria-live="polite">${movers()}</div>` : ''}
     <div class="book">
-      <div class="panel"><h3><span class="side long">${term('Long', TIP.long)}</span> · bets these keep rising</h3><div id="bookLong">${side('long')}</div></div>
-      <div class="panel"><h3><span class="side short">${term('Short', TIP.short)}</span> · bets these keep falling</h3><div id="bookShort">${side('short')}</div></div>
+      <div class="panel"><div class="sidehead"><h3><span class="side long">${term('Long', TIP.long)}</span> · bets these keep rising</h3><span class="sidesum" id="sumLong">${sideSum('long')}</span></div><div id="bookLong">${side('long')}</div></div>
+      <div class="panel"><div class="sidehead"><h3><span class="side short">${term('Short', TIP.short)}</span> · bets these keep falling</h3><span class="sidesum" id="sumShort">${sideSum('short')}</span></div><div id="bookShort">${side('short')}</div></div>
     </div>
     <p class="muted" style="font-size:13px;margin:0" id="liveNote">${liveNote()}</p>
     <dl class="glossary">
