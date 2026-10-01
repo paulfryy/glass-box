@@ -103,7 +103,8 @@ def funding_month(symbol, month):
     df.columns = [c.strip() for c in df.columns]
     t = pd.to_datetime(pd.to_numeric(df[[c for c in df.columns if "time" in c.lower()][0]]), unit="ms", utc=True)
     r = pd.to_numeric(df[[c for c in df.columns if "rate" in c.lower()][0]])
-    return r.groupby(t.dt.floor("D").values).sum()
+    day = pd.DatetimeIndex(t.dt.floor("D"))          # keep UTC: .values would drop the timezone
+    return r.groupby(day).sum()
 
 
 def load(name):
