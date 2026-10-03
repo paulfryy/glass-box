@@ -16,6 +16,8 @@ jobs:
           python-version: "3.12"
       - run: pip install -r lab/requirements.txt
       - run: python lab/m1.py
+      - run: python lab/carry.py      # forward test F1: BTC+ETH cash-and-carry (from 2026-10-05)
+      - run: python lab/seesaw.py     # forward test F2: S1-smooth72 (from 2026-10-05)
       - run: python lab/proof.py      # OpenTimestamps: anchor each week's positions file in Bitcoin
       - name: Commit new data and positions
         run: |

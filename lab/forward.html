@@ -1,0 +1,146 @@
+<title>__TITLE__ · Strategy Lab</title>
+<meta name="description" content="A forward (live paper) test in the Glass Box Strategy lab: rules fixed before the start, positions published and Bitcoin-timestamped, losses included.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+__CSS__
+.rules{margin:10px 0 0;padding-left:20px;display:grid;gap:6px;max-width:80ch}
+.caveat{border-left:3px solid var(--warn);background:var(--warn-soft);padding:10px 14px;border-radius:0 8px 8px 0;font-size:13.5px;max-width:90ch}
+.caveat ul{margin:6px 0 0;padding-left:18px;display:grid;gap:4px}
+</style>
+
+<div class="wrap" style="padding-block:18px 0">
+  <nav class="tabs" aria-label="Sections">
+    <a href="/">This coin</a>
+    <a href="/#check">Check any coin</a>
+    <a href="/lab/" aria-current="page">Strategy lab</a>
+  </nav>
+  <nav class="subnav" aria-label="Strategy lab pages" id="subnav"></nav>
+</div>
+<div class="wrap" id="lab"></div>
+
+<script id="data" type="application/json">__DATA__</script>
+<script>
+(function(){
+  const D = JSON.parse(document.getElementById('data').textContent);
+  const S = D.strategy;
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+  const pct = (x, d=1) => (x >= 0 ? '+' : '−') + Math.abs(x * 100).toFixed(d) + '%';
+  const cls = x => x > 0 ? 'up' : (x < 0 ? 'down' : '');
+  const usd = x => '$' + x.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  const usd0 = x => '$' + Math.round(x).toLocaleString('en-US');
+  const price = x => x == null ? '–' : (x >= 1 ? x.toFixed(2) : x.toPrecision(4));
+  const fmtDate = s => new Date(s + 'T00:00:00Z').toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC'});
+  const localTime = ms => { const d = new Date(ms);
+    return `${d.toLocaleString('en-US', {month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short'})} (${d.toISOString().slice(11, 16)} UTC)`; };
+  const utcStamp = s => Date.parse(String(s).replace(' ', 'T') + ':00Z');
+  const coinLink = c => `<a class="coin" href="https://www.tradingview.com/chart/?symbol=${encodeURIComponent('BINANCE:' + c + 'USDT.P')}" target="_blank" rel="noopener">${esc(c)}</a>`;
+  const raw = f => `https://raw.githubusercontent.com/paulfryy/glass-box/main/lab/proofs/${S.id}/${f}`;
+  document.getElementById('subnav').innerHTML = D.nav.map(n => `<a href="${n.href}"${n.id === S.id ? ' aria-current="page"' : ''}>${esc(n.label)}</a>`).join('');
+
+  const eq = D.equity, last = eq.length ? eq[eq.length - 1] : null;
+  const value = last ? last.e : D.bankroll, ret = value / D.bankroll - 1;
+  const btcRet = last ? last.b / D.bankroll - 1 : 0;
+  let peak = D.bankroll, dd = 0;
+  for (const r of eq) { peak = Math.max(peak, r.e); dd = Math.min(dd, r.e / peak - 1); }
+
+  function chart(){
+    if (eq.length < 2) return `<p class="empty">The chart starts after the second daily result. The account opens at the ${fmtDate(S.start)} close (00:00 UTC Tuesday); the first result is published the next morning, around 09:30 UTC.</p>`;
+    const pts = [{e: D.bankroll, b: D.bankroll}, ...eq];
+    const cash = pts.map((_, i) => D.bankroll * Math.pow(1.04, i / 365));
+    const W = 800, H = 240, pl = 60, pr = 12, pt = 12, pb = 28;
+    const vals = pts.flatMap(p => [p.e, p.b]).concat(S.cash_line ? cash : []);
+    let lo = Math.min(...vals), hi = Math.max(...vals);
+    const pad = (hi - lo) * 0.08 || 10; lo -= pad; hi += pad;
+    const x = i => pl + i * (W - pl - pr) / (pts.length - 1), y = v => pt + (hi - v) * (H - pt - pb) / (hi - lo);
+    const line = arr => arr.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+    const ticks = [lo + pad, (lo + hi) / 2, hi - pad];
+    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Paper account value since ${fmtDate(S.start)}">
+      ${ticks.map(t => `<line x1="${pl}" x2="${W - pr}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)" opacity=".7"/>
+        <text x="${pl - 8}" y="${y(t) + 4}" text-anchor="end" font-size="11" fill="var(--muted)" font-family="var(--mono)">${usd0(t)}</text>`).join('')}
+      ${S.cash_line ? `<polyline points="${line(cash)}" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 4"/>` : ''}
+      <polyline points="${line(pts.map(p => p.b))}" fill="none" stroke="var(--btc)" stroke-width="1.8"/>
+      <polyline points="${line(pts.map(p => p.e))}" fill="none" stroke="var(--accent)" stroke-width="2.5"/>
+      <text x="${pl}" y="${H - 8}" font-size="11" fill="var(--muted)">${fmtDate(S.start)}</text>
+      <text x="${W - pr}" y="${H - 8}" font-size="11" fill="var(--muted)" text-anchor="end">${fmtDate(last.d)}</text>
+    </svg>
+    <div class="legend"><span><svg class="key" width="26" height="10"><line x1="1" y1="5" x2="25" y2="5" stroke="var(--accent)" stroke-width="2.5"/></svg>${esc(S.name)} (after costs)</span>
+      <span><svg class="key" width="26" height="10"><line x1="1" y1="5" x2="25" y2="5" stroke="var(--btc)" stroke-width="1.8"/></svg>Buy and hold BTC</span>
+      ${S.cash_line ? `<span><svg class="key" width="26" height="10"><line x1="1" y1="5" x2="25" y2="5" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 4"/></svg>Cash at 4% a year (the bar)</span>` : ''}</div>`;
+  }
+
+  function positions(){
+    if (!D.book.length) return `<p class="empty">No positions yet: the account opens at the ${fmtDate(S.start)} close.</p>`;
+    const rows = D.book.slice().sort((a, b) => b.weight - a.weight);
+    const gross = rows.reduce((s, p) => s + Math.abs(p.weight), 0);
+    return `<div class="tbl"><table><thead><tr><th>Coin</th>${S.id === 'carry' ? '<th>Leg</th>' : ''}<th>Side</th><th class="r">Size</th><th class="r hide-sm">${S.id === 'carry' ? 'Entry' : 'Last close'}</th></tr></thead><tbody>
+      ${rows.map(p => `<tr><td>${S.id === 'carry' ? esc(p.coin) : coinLink(p.coin)}</td>${S.id === 'carry' ? `<td>${esc(p.leg)}</td>` : ''}
+        <td><span class="side ${p.weight > 0 ? 'long' : 'short'}">${p.weight > 0 ? 'long' : 'short'}</span></td>
+        <td class="num">${usd0(Math.abs(p.weight) * value)}</td><td class="num hide-sm">${price(p.ref)}</td></tr>`).join('')}
+    </tbody></table></div>
+    <p class="muted" style="font-size:13px;margin:0">${esc(S.positions_note)} Total position size ${usd0(gross * value)} (${(gross * 100).toFixed(0)}% of the account).</p>`;
+  }
+
+  const hist = D.history.slice().reverse();
+  const proofs = (D.proofs || []).slice().reverse();
+  document.getElementById('lab').innerHTML = `
+  <section class="intro">
+    <div class="label">Strategy lab · forward test · candidate</div>
+    <h1>${esc(S.name)}</h1>
+    <p>${esc(S.what)}</p>
+    <p class="muted" style="font-size:14px">${esc(S.why)} Its rules were <a href="${D.repo}/blob/main/lab/forward_protocol.md" target="_blank" rel="noopener">fixed and fingerprinted</a> on Oct 3, 2026, and only results from the ${fmtDate(S.start)} close onward count. Nothing before that is shown.</p>
+  </section>
+
+  <section class="panel" aria-label="Paper account">
+    <div class="hero-grid">
+      <div class="hero"><div class="label">Official value · daily close</div>
+        <div class="big mono">${usd(value)}</div><div class="delta ${cls(ret)}">${pct(ret, 2)} since ${fmtDate(S.start)}</div>
+        <div class="s">Data through ${esc(D.status.data_through ? fmtDate(D.status.data_through) : '–')} (UTC). ${esc(S.update_note)}</div></div>
+      <div class="stats">
+        <div class="stat"><div class="label">Holding BTC instead</div><div class="v">${usd(last ? last.b : D.bankroll)}</div><div class="s ${cls(btcRet)}">${last ? pct(btcRet, 2) : '–'}</div></div>
+        <div class="stat"><div class="label">Worst drop</div><div class="v">${dd < 0 ? pct(dd, 1) : '0%'}</div><div class="s">from a previous high</div></div>
+        <div class="stat"><div class="label">Days live</div><div class="v">${eq.length}</div><div class="s">of about 182 planned</div></div>
+      </div>
+    </div>
+    <div class="chart">${chart()}</div>
+  </section>
+
+  <section class="panel" aria-label="Positions"><h2>${esc(S.positions_title)}</h2>${positions()}</section>
+
+  <section class="panel" aria-label="Weekly results">
+    <h2>Week by week</h2>
+    ${hist.length ? `<div class="tbl"><table><thead><tr><th>Week of</th><th class="r">After costs</th><th class="r hide-sm">Trading costs</th><th class="r hide-sm">Funding</th><th class="r">BTC</th></tr></thead><tbody>
+      ${hist.map(h => `<tr><td>${fmtDate(h.week)}${h.days < 7 ? ' <span class="muted">(so far)</span>' : ''}</td><td class="num ${cls(h.ret)}">${pct(h.ret, 2)}</td>
+        <td class="num hide-sm">${pct(-h.cost, 2)}</td><td class="num hide-sm">${pct(h.funding, 2)}</td><td class="num ${cls(h.btc)}">${pct(h.btc, 2)}</td></tr>`).join('')}
+    </tbody></table></div>` : '<p class="empty">No results yet.</p>'}
+    <p class="muted" style="font-size:13px;margin:0">Funding is published by Binance once a month (included through ${esc(D.status.funding_through ? fmtDate(D.status.funding_through) : '–')}), so recent weeks shift when each month's funding arrives.</p>
+  </section>
+
+  <section style="display:grid;gap:12px" aria-label="Checkpoints">
+    <h2>When we'll judge it</h2>
+    <div class="checkpoints">
+      <div class="cp"><span class="when">Week 13 · ${fmtDate(S.cp13)}</span><span>First write-up here, win or lose.</span></div>
+      <div class="cp"><span class="when">Week 26 · ${fmtDate(S.cp26)}</span><span>${esc(S.bar)}</span></div>
+    </div>
+  </section>
+
+  <div class="caveat"><b>Read before drawing conclusions</b><ul>${S.caveats.map(c => `<li>${esc(c)}</li>`).join('')}</ul></div>
+
+  <details class="how"><summary>Exactly how it works</summary><ul class="rules">${S.rules.map(r => `<li>${r}</li>`).join('')}</ul></details>
+
+  <details class="how" id="proof"><summary>Proof: check we didn't change anything afterwards</summary>
+    <p class="muted" style="margin:10px 0 0;font-size:14px;max-width:80ch">${esc(S.proof_note)} Each file's fingerprint is stamped into Bitcoin through <a href="https://opentimestamps.org" target="_blank" rel="noopener">OpenTimestamps</a>; drop a file and its .ots proof on opentimestamps.org to check it.</p>
+    ${proofs.length ? `<div class="tbl" style="margin-top:10px"><table><thead><tr><th>${S.id === 'seesaw' ? 'Day' : 'Week of'}</th><th>Fingerprint</th><th>Bitcoin</th><th>Files</th></tr></thead><tbody>
+      ${proofs.map(p => `<tr><td>${fmtDate(p.week)}</td><td class="mono" style="font-size:12px" title="${esc(p.sha256)}">${esc(p.sha256.slice(0, 16))}…</td>
+        <td>${p.bitcoin_block ? 'block ' + Number(p.bitcoin_block).toLocaleString('en-US') + ' ✓' : 'pending'}</td>
+        <td><a href="${raw(p.week + '.csv')}">positions</a> · <a href="${raw(p.week + '.csv.ots')}">.ots</a>${p.run_url ? ` · <a href="${esc(p.run_url)}" target="_blank" rel="noopener">run log</a>` : ''}</td></tr>`).join('')}
+    </tbody></table></div>` : '<p class="empty" style="margin-top:8px">The first proof appears with the first positions.</p>'}
+  </details>
+
+  <footer class="foot">
+    <div><b>Not financial advice, and not a signals service.</b> A research log with no real money. Nothing here is connected to the Glass Box coin.</div>
+    <div>Official data last updated ${esc(D.status.updated_utc ? localTime(utcStamp(D.status.updated_utc)) : '–')}. <a href="${D.repo}/tree/main/lab/${S.id}" target="_blank" rel="noopener">Code, positions and daily numbers are public.</a></div>
+  </footer>`;
+})();
+</script>

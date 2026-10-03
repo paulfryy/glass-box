@@ -35,21 +35,40 @@ CALENDARS = ["https://a.pool.opentimestamps.org", "https://b.pool.opentimestamps
              "https://a.pool.eternitywall.com"]
 
 
-def week_files():
-    """Split positions.csv into one file per week (created once; existing files are never rewritten)."""
-    text = open(os.path.join(HERE, "positions.csv"), encoding="utf-8").read().splitlines()
+def week_files(src=os.path.join(HERE, "positions.csv"), dest=PROOFS):
+    """Split a positions file into one file per week (first column), created once and never rewritten."""
+    if not os.path.exists(src):
+        return []
+    text = open(src, encoding="utf-8").read().splitlines()
     header, rows = text[0], text[1:]
     weeks = {}
     for line in rows:
         weeks.setdefault(next(csv.reader(io.StringIO(line)))[0], []).append(line)
-    os.makedirs(PROOFS, exist_ok=True)
+    os.makedirs(dest, exist_ok=True)
     out = []
     for week, lines in sorted(weeks.items()):
-        p = os.path.join(PROOFS, f"{week}.csv")
+        p = os.path.join(dest, f"{week}.csv")
         if not os.path.exists(p):
             with open(p, "w", encoding="utf-8", newline="\n") as f:
                 f.write("\n".join([header] + lines) + "\n")
         out.append((week, p))
+    return out
+
+
+def day_files(src_dir, dest):
+    """Copy each finished day's positions file (byte for byte) into the proofs folder, once."""
+    if not os.path.isdir(src_dir):
+        return []
+    os.makedirs(dest, exist_ok=True)
+    out = []
+    for name in sorted(os.listdir(src_dir)):
+        if not name.endswith(".csv"):
+            continue
+        p = os.path.join(dest, name)
+        if not os.path.exists(p):
+            with open(os.path.join(src_dir, name), "rb") as a, open(p, "wb") as b:
+                b.write(a.read())
+        out.append((name[:-4], p))
     return out
 
 
@@ -102,16 +121,27 @@ def bitcoin_block(ft):
 
 
 def main():
-    idx_path = os.path.join(PROOFS, "index.csv")
-    os.makedirs(PROOFS, exist_ok=True)
+    stamp_set(PROOFS, week_files())                                                    # M1, weekly
+    stamp_set(os.path.join(PROOFS, "carry"),                                           # F1 carry, weekly
+              week_files(os.path.join(HERE, "carry", "positions.csv"), os.path.join(PROOFS, "carry")))
+    stamp_set(os.path.join(PROOFS, "seesaw"),                                          # F2 seesaw, daily
+              day_files(os.path.join(HERE, "seesaw", "positions"), os.path.join(PROOFS, "seesaw")))
+
+
+def stamp_set(folder, items):
+    """Stamp new files, upgrade pending proofs, and keep folder/index.csv + folder/status.json."""
+    if not items:
+        return
+    idx_path = os.path.join(folder, "index.csv")
+    os.makedirs(folder, exist_ok=True)
     index = list(csv.DictReader(open(idx_path, encoding="utf-8"))) if os.path.exists(idx_path) else []
     known = {r["week"] for r in index}
-    st_path = os.path.join(PROOFS, "status.json")
+    st_path = os.path.join(folder, "status.json")
     status = json.load(open(st_path)) if os.path.exists(st_path) else {}
     run = os.environ.get("GITHUB_RUN_ID")
     run_url = f"{os.environ.get('GITHUB_SERVER_URL')}/{os.environ.get('GITHUB_REPOSITORY')}/actions/runs/{run}" if run else ""
 
-    for week, path in week_files():
+    for week, path in items:
         sha = hashlib.sha256(open(path, "rb").read()).hexdigest()
         if not os.path.exists(path + ".ots"):
             n = stamp(path)

@@ -22,3 +22,12 @@ Trading strategies tested in public with $5,000 paper accounts from 2026-09-28. 
 - `lab/render.py` builds the three pages from those committed files (stdlib only) inside the 10-minute
   "Refresh dashboard" job. Shared styles: `lab/common.css`.
 - `lab/universe.yaml` is the frozen coin list. Nothing about any rule is re-tuned.
+
+### Forward tests (from the 2026-10-05 close)
+Two near-misses run as live paper accounts, rules fixed in `lab/forward_protocol.md` (SHA-256 in
+`lab/forward_protocol.sha256`) before they start; no backdating.
+- `/lab/carry/` — `lab/carry.py`: BTC + ETH cash-and-carry (half spot long, half perp short), weekly positions.
+- `/lab/seesaw/` — `lab/seesaw.py`: S1-smooth72 on a frozen 712-contract universe (`lab/seesaw/universe.json`);
+  hourly positions computed daily from Binance's archive, one file per day in `lab/seesaw/positions/`.
+Both run in the "Momentum lab" workflow; `lab/proof.py` stamps their positions into Bitcoin (`lab/proofs/carry/`,
+`lab/proofs/seesaw/`).
