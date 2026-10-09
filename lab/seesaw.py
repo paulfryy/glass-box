@@ -137,6 +137,24 @@ def refresh_funding(F, symbols):
     return F
 
 
+def hourly_complete_through(H, C, lists, end_day, now=None):
+    """Step end_day back while any coin it needs (the five large coins + that day's list) is missing hours that day.
+    Coins without a daily close that day have stopped trading and don't count. After 20:00 UTC, accept what's there."""
+    now = now or pd.Timestamp.now(tz="UTC")
+    mondays = sorted(lists)
+    while end_day >= START and now.hour < 20:
+        mon = [m for m in mondays if m < end_day]
+        need = set(LARGE) | (set(lists[mon[-1]]) if mon else set())
+        day = H[(H.index >= end_day) & (H.index < end_day + pd.Timedelta(days=1))]
+        late = [c for c in need if (c not in day.columns or day[c].notna().sum() < 24)
+                and c in C.columns and end_day in C.index and pd.notna(C.at[end_day, c])]
+        if not late:
+            break
+        print(f"  holding back {end_day:%Y-%m-%d}: hourly data not published yet for {len(late)} coin(s) ({', '.join(sorted(late)[:5])})")
+        end_day -= pd.Timedelta(days=1)
+    return end_day
+
+
 def held_positions(H, lists, end_day):
     """Hourly target and held positions from START to the end of end_day (only data before each hour)."""
     hours = pd.date_range(START - pd.Timedelta(hours=SMOOTH), end_day + pd.Timedelta(hours=23), freq="h")
@@ -185,6 +203,8 @@ def main():
     if not a.offline:
         C, V = refresh_daily(C, V)
         csv_save(C, "daily_close"), csv_save(V, "daily_volume")
+    use = m1.complete_through(C)                           # hold back a day some coins haven't published yet
+    C, V = C[C.index <= use], V[V.index <= use]
     lists = weekly_lists(C, V)
     pd.DataFrame([{"week": f"{m:%Y-%m-%d}", "rank": i + 1, "symbol": s} for m, v in lists.items() for i, s in enumerate(v)]
                  ).to_csv(os.path.join(OUT, "lists.csv"), index=False, lineterminator="\n", encoding="utf-8")
@@ -197,6 +217,7 @@ def main():
         csv_save(H, "hourly")
         F = refresh_funding(F, sorted(set(C.columns)))
         csv_save(F, "funding")
+    end_day = hourly_complete_through(H, C, lists, end_day)
     if end_day < START:
         open(os.path.join(OUT, "status.txt"), "w", newline="\n").write(
             f"data_through={end_day:%Y-%m-%d}\nfunding_through={F.index.max():%Y-%m-%d}\nupdated_utc=\n")

@@ -107,6 +107,20 @@ def funding_month(symbol, month):
     return r.groupby(day).sum()
 
 
+def complete_through(C, now=None):
+    """Latest day that can be used. Binance doesn't publish every coin's file at the same moment, so a day is held
+    back while any coin that traded the day before is still missing it, until 20:00 UTC (the 21:20 run then uses
+    it, treating coins still missing as having stopped trading)."""
+    now = now or pd.Timestamp.now(tz="UTC")
+    d = C.index.max()
+    late = [s for s in C.columns if pd.notna(C.at[d - pd.Timedelta(days=1), s]) and pd.isna(C.at[d, s])] \
+        if d - pd.Timedelta(days=1) in C.index else []
+    if late and now.hour < 20:
+        print(f"  holding back {d:%Y-%m-%d}: {len(late)} coin(s) not published yet ({', '.join(late[:5])})")
+        return d - pd.Timedelta(days=1)
+    return d
+
+
 def load(name):
     p = os.path.join(DATA, f"{name}.csv")
     df = pd.read_csv(p, index_col=0)
@@ -123,8 +137,12 @@ def refresh(symbols):
     last = C.index.max()
 
     def one(s):
+        # each coin catches up from ITS OWN last day, so a file that was late on one run is fetched on the next
+        lv = C[s].last_valid_index() if s in C.columns else None
+        if lv is None or lv < last - pd.Timedelta(days=10):
+            return s, None, None                           # not trading any more
         try:
-            return s, new_days(s, last), None
+            return s, new_days(s, lv), None
         except Exception as e:
             return s, None, repr(e)
     with ThreadPoolExecutor(8) as ex:
@@ -266,6 +284,8 @@ def main():
         C, V, F = load("closes"), load("volumes"), load("funding")
     else:
         C, V, F = refresh(symbols + ["BTCUSDT"])
+    use = complete_through(C)                              # don't act on a day some coins haven't published yet
+    C, V, F = C[C.index <= use], V[V.index <= use], F[F.index <= use]
     btc = C.pop("BTCUSDT")
     V = V.drop(columns=["BTCUSDT"], errors="ignore")
     F = F.drop(columns=["BTCUSDT"], errors="ignore")
