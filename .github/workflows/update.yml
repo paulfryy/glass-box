@@ -22,9 +22,16 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r requirements.txt
-      - run: python build.py
+      # if the coin page can't be built, keep the live one so the lab pages still deploy; the run is marked failed at the end
+      - id: build
+        run: python build.py
+        continue-on-error: true
         env:
           HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
+      - if: steps.build.outcome == 'failure'
+        run: |
+          echo "::warning::coin page build failed; re-using the live coin page"
+          mkdir -p public && curl -fsS https://glassbox.gripe/ -o public/index.html
       - run: python lab/render.py      # Momentum lab page, from the committed lab/*.csv (no network)
       - uses: actions/upload-pages-artifact@v5
         with:
@@ -38,3 +45,7 @@ jobs:
       - id: deploy_retry
         if: steps.deploy.outcome == 'failure'
         uses: actions/deploy-pages@v5
+      - if: steps.build.outcome == 'failure'
+        run: |
+          echo "::error::the coin page build failed (the lab pages were still deployed); see the 'build' step above"
+          exit 1

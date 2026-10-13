@@ -1,5 +1,5 @@
 # Which coin the page shows. To switch coins: change `mint` (and `image`), commit, done.
 mint: 7qEZQvojcBEyWjuzpHVATBA3yoBNpEvx42ELLpuWpump
 image: assets/glass.png
-lookback_days: 14          # how far back to look for the coin's creation
+lookback_days: 3650        # how far back to look for the coin's creation (a quiet coin is one page of data either way)
 max_pages_per_run: 30      # cap: 30 pages x 10 Helius credits = 300 credits per refresh at most
