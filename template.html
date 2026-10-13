@@ -356,7 +356,7 @@ details.holders summary{cursor:pointer;font-family:var(--display);font-weight:60
             <div class="mint"><code>${esc(d.mint)}</code><button class="minibtn" type="button" data-copy="${esc(share)}">Copy share link</button></div></div>
           <div class="facts">
             <div><span class="label">Age</span><b>${d.created ? age(d.created) : '–'}</b></div>
-            <div><span class="label">Market cap</span><b>${d.mcapSol.toFixed(1)} SOL</b></div>
+            <div><span class="label">Market cap</span><b>${d.mcapSol != null ? d.mcapSol.toFixed(1) + ' SOL' : (d.graduated ? 'on PumpSwap' : '–')}</b></div>
             <div><span class="label">Fees go to</span><b>${esc(d.rewardMode)}</b></div>
             <div><span class="label">${d.graduated ? 'Graduated' : 'To graduation'}</span><b>${(d.curveProgress * 100).toFixed(1)}%</b>
               <div class="mini-progress"><i style="width:${Math.max(d.curveProgress * 100, 1)}%"></i></div></div>
@@ -381,10 +381,20 @@ details.holders summary{cursor:pointer;font-family:var(--display);font-weight:60
     btn.disabled = true; btn.textContent = 'Scanning…';
     out.innerHTML = '<div class="scanning"><div class="scanbar"><i></i></div><span class="fine">Reading the blockchain: creation, launch buyers, holders, authorities…</span></div>';
     try {
-      const r = await fetch(API + encodeURIComponent(mint));
-      const d = await r.json();
+      let d;
+      try {
+        d = await (await fetch(API + encodeURIComponent(mint))).json();
+      } catch (err) {
+        out.innerHTML = "<p class=\"err\">Couldn't reach the scanner. Check your connection and try again.</p>";
+        return;
+      }
       if (!d.ok) { out.innerHTML = `<p class="err">${esc(d.error || 'Something went wrong.')}</p>`; return; }
-      out.innerHTML = report(d);
+      try {
+        out.innerHTML = report(d);
+      } catch (err) {          // a display bug must not look like a network failure
+        out.innerHTML = `<p class="err">The scan worked, but this page couldn't display it (${esc(err.message)}). Please tell us: ${esc(d.mint)}</p>`;
+        return;
+      }
       recent({mint: d.mint, name: d.name, verdict: d.verdict});
       try { history.replaceState(null, '', `?mint=${encodeURIComponent(d.mint)}#check`); } catch (e) {}
     } catch (err) {
