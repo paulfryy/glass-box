@@ -1,0 +1,5 @@
+week,symbol,leg,side,weight,entry_close,published_utc
+2026-11-09,BTCUSDT,spot,long,0.25,75368.41,2026-11-10 09:20
+2026-11-09,BTCUSDT,perp,short,-0.25,75327.0,2026-11-10 09:20
+2026-11-09,ETHUSDT,spot,long,0.25,2135.24,2026-11-10 09:20
+2026-11-09,ETHUSDT,perp,short,-0.25,2134.0,2026-11-10 09:20
