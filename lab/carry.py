@@ -132,7 +132,8 @@ def main():
     r = pd.DataFrame({"gross": s["gross"] + p["gross"], "funding": p["funding"], "cost": s["cost"] + p["cost"]})
     r["net"] = r["gross"] + r["funding"] - r["cost"]
     r = r.iloc[:-1] if len(r) > 1 else r.iloc[0:0]
-    btc = S["BTC"][sel].pct_change(fill_method=None).shift(-1).reindex(r.index).fillna(0.0)
+    # benchmark: BTC perpetual closes, the same source as every other lab page
+    btc = P["BTC"][sel].pct_change(fill_method=None).shift(-1).reindex(r.index).fillna(0.0)
     eq = pd.DataFrame({"date": [f"{d + pd.Timedelta(days=1):%Y-%m-%d}" for d in r.index],
                        "gross": r["gross"].round(6), "funding": r["funding"].round(6), "cost": r["cost"].round(6),
                        "net": r["net"].round(6), "equity": (BANKROLL * (1 + r["net"]).cumprod()).round(2),
