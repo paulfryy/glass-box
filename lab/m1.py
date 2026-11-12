@@ -107,6 +107,83 @@ def funding_month(symbol, month):
     return r.groupby(day).sum()
 
 
+def fetch_day(symbol, day, market="futures"):
+    """(close, quote volume) of one daily candle from the archive, or None if Binance has no file for it."""
+    base = f"data/futures/um/daily/klines/{symbol}/1d/" if market == "futures" else f"data/spot/daily/klines/{symbol}/1d/"
+    url = f"{FILES}{base}{symbol}-1d-{day:%Y-%m-%d}.zip"
+    for attempt in range(4):
+        try:
+            r = requests.get(url, timeout=60)
+            if r.status_code == 404:
+                return None
+            r.raise_for_status()
+            with zipfile.ZipFile(io.BytesIO(r.content)) as z:
+                raw = z.read(z.namelist()[0]).decode()
+            d = pd.read_csv(io.StringIO(raw), header=0 if not raw[:1].isdigit() else None).iloc[:, :8]
+            return float(d.iloc[0, 4]), float(d.iloc[0, 7])
+        except (requests.RequestException, zipfile.BadZipFile, ValueError, IndexError):
+            time.sleep(2 * (attempt + 1))
+    return None
+
+
+def gaps(C, days=30):
+    """(symbol, day) cells missing in the last `days` days: whole days absent from the index, or a coin with data
+    both before and after a day but not on it. Binance has skipped a whole day and backfilled it two weeks later."""
+    end = C.index.max()
+    full = pd.date_range(end - pd.Timedelta(days=days), end, freq="D")
+    X = C.reindex(C.index.union(full))
+    hole = X.isna() & X.ffill().notna() & X.bfill().notna()
+    hole = hole[hole.index >= full[0]]
+    return [(s, d) for d, row in hole.iterrows() for s in row.index[row]]
+
+
+def fill_gaps(C, V=None, days=30, market="futures", symbol_of=lambda c: c):
+    """Fetch every gap cell that Binance has since published. Returns the number filled."""
+    todo = gaps(C, days)
+    if not todo:
+        return C, V, 0
+    with ThreadPoolExecutor(16) as ex:
+        got = list(ex.map(lambda j: (j, fetch_day(symbol_of(j[0]), j[1], market)), todo))
+    n = 0
+    for (s, d), x in got:
+        if x is not None:
+            C.loc[d, s] = x[0]
+            if V is not None:
+                V.loc[d, s] = x[1]
+            n += 1
+    if n:
+        print(f"  filled {n} missing day-values (of {len(todo)} gaps) in the last {days} days")
+    C = C.sort_index()
+    return C, (V.sort_index() if V is not None else None), n
+
+
+def honor_published(W, E, pos_path, label):
+    """Past weeks are valued at the positions actually published for them. If the data changed after publishing
+    (e.g. a late Binance backfill), the recomputed weights can differ; those weeks are replaced by the published
+    weights (a coin is dropped only on days it has no price, i.e. stopped trading; a data gap in its volume history
+    must not un-publish it). Unchanged weeks are left exactly as computed. Pass E = prices available (C.notna())."""
+    if not os.path.exists(pos_path):
+        return W
+    pos = pd.read_csv(pos_path)
+    W = W.copy()
+    for wk, p in pos.groupby("week"):
+        m = pd.Timestamp(wk, tz="UTC")
+        if m not in W.index:
+            continue
+        pub = p.set_index("symbol")["weight"].astype(float)
+        rec = W.loc[m]
+        cols = sorted(set(pub.index) | set(rec.index[rec.abs() > 1e-9]))
+        if (pub.reindex(cols).fillna(0) - rec.reindex(cols).fillna(0)).abs().max() <= 1e-5:
+            continue
+        rows = W.index[(W.index >= m) & (W.index < m + pd.Timedelta(days=7))]
+        W.loc[rows, :] = 0.0
+        for s, w in pub.items():
+            if s in W.columns:
+                W.loc[rows, s] = w * E.loc[rows, s].astype(float)
+        print(f"  {label}: week {wk} valued at its published positions (data changed after publishing)")
+    return W
+
+
 def complete_through(C, now=None):
     """Latest day that can be used. Binance doesn't publish every coin's file at the same moment, so a day is held
     back while any coin that traded the day before is still missing it, until 20:00 UTC (the 21:20 run then uses
@@ -155,6 +232,7 @@ def refresh(symbols):
         for t, row in df.iterrows():
             C.loc[t, s] = row["close"]
             V.loc[t, s] = row["quote_volume"]
+    C, V, _ = fill_gaps(C, V)                              # days Binance skipped and published later
     # funding: every completed month after the last month we hold, if it's published
     have = F.index.max().tz_convert(None).to_period("M") if len(F) else pd.Period("2024-12", "M")
     now_m = pd.Timestamp.now(tz="UTC").tz_convert(None).to_period("M")
@@ -296,11 +374,13 @@ def main():
     stamp = pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%d %H:%M")
     # 1. M1 (the candidate): positions + paper account
     publish(W, C, os.path.join(HERE, "positions.csv"), stamp)
+    W = honor_published(W, C.notna() & C.shift(-1).notna(), os.path.join(HERE, "positions.csv"), "M1")
     eq = account(W, C, F, btc, os.path.join(HERE, "equity.csv"))
     # 2. controls: same data and start date, spot costs, no funding
     for cid, (fn, fee, slip, fund) in CONTROLS.items():
         Wc = fn(C, E)
         publish(Wc, C, os.path.join(HERE, "controls", cid, "positions.csv"), stamp)
+        Wc = honor_published(Wc, C.notna() & C.shift(-1).notna(), os.path.join(HERE, "controls", cid, "positions.csv"), cid)
         ec = account(Wc, C, F, btc, os.path.join(HERE, "controls", cid, "equity.csv"), fee_bps=fee, slip_bps=slip, funding=fund)
         print(f"control {cid}: ${ec['equity'].iloc[-1] if len(ec) else BANKROLL:,.2f}")
     latest = {s: float(C[s].dropna().iloc[-1]) for s in C.columns if C[s].notna().any()}

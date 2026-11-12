@@ -95,7 +95,35 @@ def refresh_daily(C, V):
         if x is not None and len(x):
             C.loc[d, s] = float(x["close"].iloc[0])
             V.loc[d, s] = float(x["quote_volume"].iloc[0])
-    return C.sort_index(), V.sort_index()
+    C, V, _ = m1.fill_gaps(C.sort_index(), V.sort_index())   # days Binance skipped and published later
+    return C, V
+
+
+def honor_published(held):
+    """Past days are valued at the hourly positions actually published for them. If late data changed the
+    recomputation, that day's hours are replaced by the published file; matching days are left as computed."""
+    pdir = os.path.join(OUT, "positions")
+    if not os.path.isdir(pdir):
+        return held
+    held = held.copy()
+    for name in sorted(os.listdir(pdir)):
+        d = pd.Timestamp(name[:10], tz="UTC")
+        hrs = held.index[(held.index >= d) & (held.index < d + pd.Timedelta(days=1))]
+        if not len(hrs):
+            continue
+        p = pd.read_csv(os.path.join(pdir, name), encoding="utf-8")
+        p["hour_utc"] = pd.to_datetime(p["hour_utc"], utc=True)
+        P = p.pivot_table(index="hour_utc", columns="symbol", values="held_weight").reindex(hrs).fillna(0.0)
+        for c in P.columns:
+            if c not in held.columns:
+                held[c] = 0.0
+        cols = held.columns
+        if (P.reindex(columns=cols).fillna(0.0) - held.loc[hrs, cols]).abs().max().max() <= 1e-5:
+            continue
+        held.loc[hrs, :] = 0.0
+        held.loc[hrs, P.columns] = P.to_numpy()
+        print(f"  seesaw: {d:%Y-%m-%d} valued at its published positions (data changed after publishing)")
+    return held
 
 
 def weekly_lists(C, V):
@@ -171,7 +199,10 @@ def held_positions(H, lists, end_day):
         X = R[[c for c in LARGE if c in R.columns]].to_numpy(dtype=float)
         fit, today = slice(max(0, h0 - WINDOW), h0), slice(h0, h0 + 24)
         Xf, Xt = X[fit][:-1], X[today.start - 1:today.stop - 1]
-        keep = ~np.isnan(Xf).any(axis=0) & ~np.isnan(Xt).any(axis=0)
+        # a big coin is used if it has >= MIN_OBS usable hours in the window and none missing today; hours with a
+        # missing value are skipped in the fit (the `ok` mask below), as the protocol's ">= 500 usable hours" says.
+        # (Before 2026-11-12 one missing hour dropped the coin for 30 days: Binance's skipped Oct 28 dropped all five.)
+        keep = (np.isfinite(Xf).sum(axis=0) >= MIN_OBS) & ~np.isnan(Xt).any(axis=0)
         if keep.sum() == 0:
             continue
         Af = np.column_stack([np.ones(len(Xf)), Xf[:, keep]])
@@ -224,7 +255,8 @@ def main():
         print(f"seesaw: starts {START:%Y-%m-%d}; data through {end_day:%Y-%m-%d}; nothing to trade yet")
         return
     held, R = held_positions(H, lists, end_day)
-    Y = R[held.columns].fillna(0.0)
+    held = honor_published(held)
+    Y = R.reindex(columns=held.columns).fillna(0.0)
     gross = (held * Y).sum(axis=1)
     turn = (held - held.shift(1).fillna(0.0)).abs().sum(axis=1)
     cost = turn * (FEE_BPS + SLIP_BPS) / 1e4
