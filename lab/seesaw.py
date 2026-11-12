@@ -95,7 +95,7 @@ def refresh_daily(C, V):
         if x is not None and len(x):
             C.loc[d, s] = float(x["close"].iloc[0])
             V.loc[d, s] = float(x["quote_volume"].iloc[0])
-    C, V, _ = m1.fill_gaps(C.sort_index(), V.sort_index())   # days Binance skipped and published later
+    C, V, _ = m1.fill_gaps(C.sort_index(), V.sort_index(), days=m1.GAP_DAYS(C))   # days Binance skipped and published later
     return C, V
 
 

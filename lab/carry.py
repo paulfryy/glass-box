@@ -65,7 +65,7 @@ def refresh(D):
                 D.loc[t, f"{c}_perp"] = v
     for market, suffix in (("spot", "_spot"), ("futures", "_perp")):    # days Binance skipped and published later
         cols = [f"{c}{suffix}" for c in COINS]
-        sub, _, _ = m1.fill_gaps(D[cols].copy(), None, 30, market, lambda col: col.split("_")[0] + "USDT")
+        sub, _, _ = m1.fill_gaps(D[cols].copy(), None, m1.GAP_DAYS(D), market, lambda col: col.split("_")[0] + "USDT")
         D = D.reindex(D.index.union(sub.index))
         D[cols] = sub.reindex(D.index)
     # funding: every completed month after the last month with any funding recorded

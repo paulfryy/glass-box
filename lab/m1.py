@@ -137,6 +137,11 @@ def gaps(C, days=30):
     return [(s, d) for d, row in hole.iterrows() for s in row.index[row]]
 
 
+def GAP_DAYS(C):
+    """Look for skipped days back to two weeks before the earliest paper start (2026-09-28)."""
+    return int((C.index.max() - pd.Timestamp("2026-09-14", tz="UTC")).days)
+
+
 def fill_gaps(C, V=None, days=30, market="futures", symbol_of=lambda c: c):
     """Fetch every gap cell that Binance has since published. Returns the number filled."""
     todo = gaps(C, days)
@@ -232,7 +237,7 @@ def refresh(symbols):
         for t, row in df.iterrows():
             C.loc[t, s] = row["close"]
             V.loc[t, s] = row["quote_volume"]
-    C, V, _ = fill_gaps(C, V)                              # days Binance skipped and published later
+    C, V, _ = fill_gaps(C, V, days=GAP_DAYS(C))            # days Binance skipped and published later
     # funding: every completed month after the last month we hold, if it's published
     have = F.index.max().tz_convert(None).to_period("M") if len(F) else pd.Period("2024-12", "M")
     now_m = pd.Timestamp.now(tz="UTC").tz_convert(None).to_period("M")
