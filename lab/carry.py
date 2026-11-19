@@ -21,6 +21,7 @@ import sys
 
 import numpy as np
 import pandas as pd
+import funding
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -68,19 +69,11 @@ def refresh(D):
         sub, _, _ = m1.fill_gaps(D[cols].copy(), None, m1.GAP_DAYS(D), market, lambda col: col.split("_")[0] + "USDT")
         D = D.reindex(D.index.union(sub.index))
         D[cols] = sub.reindex(D.index)
-    # funding: every completed month after the last month with any funding recorded
     fcols = [f"{c}_funding" for c in COINS]
-    have = D[fcols].dropna(how="all").index.max().tz_convert(None).to_period("M")
-    now_m = pd.Timestamp.now(tz="UTC").tz_convert(None).to_period("M")
-    for m in pd.period_range(have + 1, now_m - 1, freq="M"):
-        got = {c: m1.funding_month(f"{c}USDT", str(m)) for c in COINS}
-        if any(v is None for v in got.values()):
-            print(f"  funding for {m} not published yet")
-            break
-        for c, f in got.items():
-            for t, v in f.items():
-                D.loc[t, f"{c}_funding"] = v
-        print(f"  added funding for {m}")
+    symbols = [f"{c}USDT" for c in COINS]
+    rates = funding.refresh(D[fcols].set_axis(symbols, axis=1),
+                            D[[f"{c}_perp" for c in COINS]].set_axis(symbols, axis=1), START, m1.funding_month)
+    D[fcols] = rates.reindex(D.index).set_axis(fcols, axis=1)
     D = D.sort_index()
     D.to_csv(DATA, float_format="%.10g", lineterminator="\n")
     print(f"carry data through {D.index.max():%Y-%m-%d} (was {last:%Y-%m-%d})")
@@ -104,8 +97,7 @@ def main():
         D = refresh(D)
     S = D[[f"{c}_spot" for c in COINS]].set_axis(COINS, axis=1)
     P = D[[f"{c}_perp" for c in COINS]].set_axis(COINS, axis=1)
-    funding_through = D[[f"{c}_funding" for c in COINS]].dropna(how="all").index.max()
-    Fz = D[[f"{c}_funding" for c in COINS]].set_axis(COINS, axis=1).fillna(0.0)
+    Fz = D[[f"{c}_funding" for c in COINS]].set_axis(COINS, axis=1)
     zero = pd.DataFrame(0.0, index=D.index, columns=COINS)
     complete = S.notna().all(axis=1) & P.notna().all(axis=1)
     S, P, Fz, zero = S[complete], P[complete], Fz[complete], zero[complete]
@@ -127,7 +119,7 @@ def main():
             add.append({"week": f"{m:%Y-%m-%d}", "symbol": f"{c}USDT", "leg": "perp", "side": "short",
                         "weight": -W.at[m, c], "entry_close": float(P.at[m, c]), "published_utc": stamp})
     if add:
-        pd.concat([pos, pd.DataFrame(add)], ignore_index=True).to_csv(pos_path, index=False, lineterminator="\n")
+        m1.append_positions(pos_path, add)
         print(f"published carry positions for {sorted({r['week'] for r in add})}")
 
     # 2. paper account: spot leg + perp leg (the short receives funding when it's positive)
@@ -147,9 +139,10 @@ def main():
     latest = {f"{c}USDT_spot": float(S[c].iloc[-1]) for c in COINS} | {f"{c}USDT_perp": float(P[c].iloc[-1]) for c in COINS}
     pd.Series(latest, name="close").to_csv(os.path.join(OUT, "latest.csv"), index_label="symbol", lineterminator="\n")
     sp = os.path.join(OUT, "status.txt")
-    old = dict(l.strip().split("=", 1) for l in open(sp) if "=" in l) if os.path.exists(sp) else {}
-    st = {"data_through": f"{S.index.max():%Y-%m-%d}", "funding_through": f"{funding_through:%Y-%m-%d}"}
-    st["updated_utc"] = old["updated_utc"] if all(old.get(k) == v for k, v in st.items()) and "updated_utc" in old else stamp
+    old = m1.read_status(sp)
+    held = W.shift(1).loc[W.index > START]
+    st = {"data_through": f"{S.index.max():%Y-%m-%d}", **funding.coverage(held, Fz)}
+    st["updated_utc"] = old.get("updated_utc", "") if a.offline else stamp
     open(sp, "w", newline="\n").write("".join(f"{k}={v}\n" for k, v in st.items()))
     print(f"carry paper equity ${eq['equity'].iloc[-1] if len(eq) else BANKROLL:,.2f} after {len(eq)} day(s)")
 

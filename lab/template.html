@@ -8,17 +8,12 @@ __CSS__
 </style>
 
 <div class="wrap" style="padding-block:18px 0">
-  <nav class="tabs" aria-label="Sections">
-    <a href="/">This coin</a>
-    <a href="/#check">Check any coin</a>
-    <a href="/lab/" aria-current="page">Strategy lab</a>
-  </nav>
   <nav class="subnav" aria-label="Strategy lab pages">
-    <a href="/lab/">Overview</a>
-    <a href="/lab/momentum/" aria-current="page">Momentum (M1)</a>
-    <a href="/lab/carry/">Carry</a>
-    <a href="/lab/seesaw/">Seesaw</a>
-    <a href="/lab/controls/">Controls</a>
+    <a href="/">Overview</a>
+    <a href="/momentum/" aria-current="page">Momentum (M1)</a>
+    <a href="/carry/">Carry</a>
+    <a href="/seesaw/">Seesaw</a>
+    <a href="/controls/">Controls</a>
   </nav>
 </div>
 <div class="wrap" id="lab"></div>
@@ -63,14 +58,8 @@ __CSS__
   const weekBase = !wk || wk === START ? D.bankroll : ((eq.find(r => r.d === wk) || {}).e || official);
   const gross = D.book.reduce((s, p) => s + Math.abs(p.weight), 0);
 
-  // ---- live marks (indicative) from api.glassbox.gripe/prices; fall back to the last daily close
-  let live = null;
-  const mark = p => { const lp = live && live.prices[p.coin + 'USDT']; return lp ? {px: lp, live: true} : {px: p.now, live: false}; };
   const dir = p => p.side === 'long' ? 1 : -1;
-  const pnlWeek = p => { const m = mark(p); return m.px == null ? 0 : Math.abs(p.weight) * weekBase * (m.px / p.entry - 1) * dir(p); };
-  // live value = official value at the last close, moved by each position's change since that close
-  const liveValue = () => official * (1 + D.book.reduce((s, p) => { const m = mark(p);
-    return s + (m.px == null || p.now == null ? 0 : p.weight * (m.px / p.now - 1)); }, 0));
+  const pnlWeek = p => p.now == null ? 0 : Math.abs(p.weight) * weekBase * (p.now / p.entry - 1) * dir(p);
 
   // ---- chart
   // expected range: bootstrap of the rule's Apr–Sep 2026 out-of-sample days (lab/band.json)
@@ -125,14 +114,12 @@ __CSS__
     return p.bitcoin_block ? `<a href="${raw(w + '.csv.ots')}">Anchored in Bitcoin block ${Number(p.bitcoin_block).toLocaleString('en-US')}</a> ✓`
       : 'Bitcoin timestamp pending (usually a few hours)'; };
 
-  // ---- live pieces (re-rendered every minute)
   function hero(){
-    const v = live ? liveValue() : official, r = v / D.bankroll - 1;
-    return `<div class="label">${live ? 'Right now · live estimate' : 'At the last daily close'}</div>
-      <div class="big mono">${usd(v)}</div>
+    const r = official / D.bankroll - 1;
+    return `<div class="label">At the last daily close</div>
+      <div class="big mono">${usd(official)}</div>
       <div class="delta ${cls(r)}">${pct(r, 2)} since ${fmtDate(START)}</div>
-      <div class="s">${live ? `Updated ${esc(localTime(live.asOf * 1000))}. Refreshes every minute.` : 'Live prices loading…'}
-        Official value at the ${esc(D.status.data_through ? fmtDate(D.status.data_through) : '')} daily close: ${usd(official)}.</div>`;
+      <div class="s">Prices through ${D.status.data_through ? fmtDate(D.status.data_through) : 'pending'}.</div>`;
   }
   function movers(){
     if (!D.book.length) return '';
@@ -148,29 +135,26 @@ __CSS__
     const h = D.history.find(x => x.week === wk);
     if (!h) return `<div class="bridge">Trading costs for this week appear after its first daily close.</div>`;
     const cost = -h.cost * weekBase, fund = h.funding * weekBase;
-    const acct = (live ? liveValue() : official) - weekBase;
+    const acct = official - weekBase;
     return `<div class="bridge" title="The tables use Monday's sizes all week; the account also re-sizes positions at each daily close, so the parts can differ from the total by a few dollars.">
       <span>Positions <b class="mono ${cls(tot)}">${sgn$(tot)}</b></span><span>·</span>
       <span>Trading costs <b class="mono ${cls(cost)}">${sgn$(cost)}</b></span><span>·</span>
       <span>Funding <b class="mono ${cls(fund)}">${sgn$(fund)}</b></span><span>=</span>
-      <span>Account this week <b class="mono ${cls(acct)}">${sgn$(acct)}</b>${live ? ' (live)' : ''}</span></div>`;
+      <span>Account this week <b class="mono ${cls(acct)}">${sgn$(acct)}</b></span></div>`;
   }
   function side(which){
     const rows = D.book.filter(p => p.side === which).sort((a, b) => Math.abs(b.weight) - Math.abs(a.weight));
     if (!rows.length) return '<p class="empty">None this week.</p>';
-    return `<div class="tbl"><table><thead><tr><th>Coin</th><th class="r">Size</th><th class="r hide-sm">Entry</th><th class="r hide-sm">Now</th><th class="r">Price move</th><th class="r">P&amp;L</th></tr></thead><tbody>
-      ${rows.map(p => { const m = mark(p); const mv = m.px == null ? null : m.px / p.entry - 1; const v = pnlWeek(p);
+    return `<div class="tbl"><table><thead><tr><th>Coin</th><th class="r">Size</th><th class="r hide-sm">Entry</th><th class="r hide-sm">Last close</th><th class="r">Price move</th><th class="r">P&amp;L</th></tr></thead><tbody>
+      ${rows.map(p => { const mv = p.now == null ? null : p.now / p.entry - 1; const v = pnlWeek(p);
         return `<tr><td>${coinLink(p.coin)}</td><td class="num">${usd0(Math.abs(p.weight) * weekBase)}</td>
           <td class="num hide-sm">${price(p.entry)}</td>
-          <td class="num hide-sm" title="${m.live ? 'Live price' : 'Last daily close (no live source for this coin)'}">${price(m.px)}${m.live || !live ? '' : '<sup>*</sup>'}</td>
+          <td class="num hide-sm">${price(p.now)}</td>
           <td class="num">${mv == null ? '–' : pct(mv)}</td><td class="num pl ${cls(v)}">${mv == null ? '–' : sgn$(v)}</td></tr>`; }).join('')}
     </tbody></table></div>`;
   }
-  function liveNote(){
-    const missing = live ? D.book.filter(p => !mark(p).live).length : 0;
-    return `Entry is the Monday daily close (00:00 UTC). Price move and P&amp;L run from that close to ${live ? 'the live price' : 'the latest daily close'}, before costs.
-      Live prices are indicative: they come from Gate.io, MEXC and OKX futures, because Binance's live feed isn't available in the US. The official account uses Binance daily closes.
-      ${missing ? `<sup>*</sup>${missing} coin${missing > 1 ? 's' : ''} without a live source show the last close.` : ''}
+  function positionNote(){
+    return `Price moves and P&amp;L use the Monday entry and latest daily close, before costs.
       This week's positions add up to ${usd0(gross * weekBase)}, half long and half short. That's usually less than the full account because a coin can be long in one of the rule's four rankings and short in another, and those cancel out.`;
   }
   // one side's running P&L this week (before costs), for the table headers
@@ -181,26 +165,13 @@ __CSS__
     const size = rows.reduce((s, p) => s + Math.abs(p.weight) * weekBase, 0);
     return `<b class="mono ${cls(v)}">${sgn$(v)}</b> <span class="muted">${size ? pct(v / size, 1) : ''} on ${usd0(size)}</span>`;
   }
-  function renderLive(){
-    const set = (id, h) => { const e = document.getElementById(id); if (e) e.innerHTML = h; };
-    set('hero', hero()); set('movers', movers()); set('bookLong', side('long')); set('bookShort', side('short')); set('liveNote', liveNote());
-    set('sumLong', sideSum('long')); set('sumShort', sideSum('short'));
-  }
-  async function loadLive(){
-    try {
-      const r = await fetch('https://api.glassbox.gripe/prices', {cache: 'no-store'});
-      const j = await r.json();
-      if (j.ok) { live = j; renderLive(); }
-    } catch (e) { /* keep showing daily closes */ }
-  }
-
   const hist = D.history.slice().reverse();
   const nWeeks = D.weeks.length;
   const cps = D.review_weeks.map(n => ({n, d: addDays(START, 7 * n)}));
   const upd = D.status.updated_utc ? localTime(utcStamp(D.status.updated_utc)) : '–';
 
   document.getElementById('lab').innerHTML = `
-  ${behindDays >= 2 ? `<div class="stale" role="status"><b>Official data is delayed.</b> The latest daily close we have is ${fmtDate(D.status.data_through)}, ${behindDays} days behind. The daily update may have failed; it will catch up automatically once it runs. Live prices below are unaffected.</div>` : ''}
+  ${behindDays >= 2 ? `<div class="stale" role="status"><b>Daily data is delayed.</b> Latest close ${fmtDate(D.status.data_through)}.</div>` : ''}
   <section class="intro">
     <div class="label">Strategy lab · candidate · public research log</div>
     <h1>Can a simple momentum rule beat memecoins?</h1>
@@ -233,7 +204,7 @@ __CSS__
       <div class="panel"><div class="sidehead"><h3><span class="side long">${term('Long', TIP.long)}</span> · bets these keep rising</h3><span class="sidesum" id="sumLong">${sideSum('long')}</span></div><div id="bookLong">${side('long')}</div></div>
       <div class="panel"><div class="sidehead"><h3><span class="side short">${term('Short', TIP.short)}</span> · bets these keep falling</h3><span class="sidesum" id="sumShort">${sideSum('short')}</span></div><div id="bookShort">${side('short')}</div></div>
     </div>
-    <p class="muted" style="font-size:13px;margin:0" id="liveNote">${liveNote()}</p>
+    <p class="muted" style="font-size:13px;margin:0">${positionNote()}</p>
     <dl class="glossary">
       <div><dt>Long</dt><dd>A bet that the price rises. It makes money when the coin goes up.</dd></div>
       <div><dt>Short</dt><dd>A bet that the price falls. It makes money when the coin goes down, and loses when it goes up.</dd></div>
@@ -260,7 +231,8 @@ __CSS__
       ${hist.map(h => `<tr><td>${fmtDate(h.week)}${h.days < 7 ? ' <span class="muted">(so far)</span>' : ''}</td><td class="num ${cls(h.ret)}">${pct(h.ret, 2)}</td>
         <td class="num hide-sm">${pct(-h.cost, 2)}</td><td class="num hide-sm">${pct(h.funding, 2)}</td><td class="num ${cls(h.btc)}">${pct(h.btc, 2)}</td></tr>`).join('')}
     </tbody></table></div>` : '<p class="empty">The first week is in progress. Official results appear after each daily close (00:00 UTC).</p>'}
-    <p class="muted" style="font-size:13px;margin:0">Official numbers use Binance daily closes. ${term('Funding', TIP.funding)} is published by Binance once a month, so each month's funding is added when it appears (included through ${esc(D.status.funding_through ? fmtDate(D.status.funding_through) : '–')}) and recent weeks may shift slightly.</p>
+    <p class="muted" style="font-size:13px;margin:0">${term('Funding', TIP.funding)} coverage through ${D.status.funding_through && D.status.funding_through !== '-' ? fmtDate(D.status.funding_through) : 'pending'}.
+      ${Number(D.status.funding_missing_contract_days) > 0 ? `Equity is provisional while ${Number(D.status.funding_missing_contract_days)} contract-days are missing.` : ''}</p>
   </section>
 
   <section style="display:grid;gap:12px" aria-label="Checkpoints">
@@ -296,10 +268,8 @@ __CSS__
   </details>
 
   <footer class="foot">
-    <div><b>Not financial advice, and not a signals service.</b> This is a research log with no real money. Nothing here is connected to the Glass Box coin. Perpetual futures are leveraged derivatives that can lose money fast, and many countries restrict them for retail traders.</div>
-    <div>Official data last updated ${esc(upd)}. New daily closes arrive around 09:20 UTC; live prices refresh every minute.</div>
+    <div>Paper account last updated ${esc(upd)}.</div>
   </footer>`;
 
-  if (D.book.length) { loadLive(); setInterval(loadLive, 60000); }
 })();
 </script>

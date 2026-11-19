@@ -1,12 +1,7 @@
 #!/usr/bin/env python3
 """
-Render the Strategy lab pages from the committed lab files. Standard library only, no network:
-it runs inside the 10-minute site build next to build.py.
-
-  public/lab/index.html           overview + scoreboard           (lab/overview.html)
-  public/lab/momentum/index.html  rule M1, the candidate          (lab/template.html)
-  public/lab/controls/index.html  'just buy memecoins' and        (lab/controls.html)
-                                  long-only momentum, the controls
+Render the Strategy Lab and its legacy redirects from the saved lab files.
+Uses the standard library and runs without network access.
 
 Usage: python lab/render.py
 """
@@ -23,6 +18,7 @@ ROOT = os.path.dirname(HERE)
 REPO = "https://github.com/paulfryy/glass-box"
 BANKROLL = 5000.0            # paper account size (results are the same in % terms)
 REVIEW_WEEKS = (13, 26)
+M1_START = "2026-09-28"
 CONTROLS = [
     {"id": "basket", "name": "Just buy memecoins",
      "what": "Holds every qualifying memecoin in equal amounts, re-set each Monday. No picking, no shorts.",
@@ -33,11 +29,11 @@ CONTROLS = [
 ]
 
 
-NAV = [{"id": "overview", "label": "Overview", "href": "/lab/"},
-       {"id": "momentum", "label": "Momentum (M1)", "href": "/lab/momentum/"},
-       {"id": "carry", "label": "Carry", "href": "/lab/carry/"},
-       {"id": "seesaw", "label": "Seesaw", "href": "/lab/seesaw/"},
-       {"id": "controls", "label": "Controls", "href": "/lab/controls/"}]
+NAV = [{"id": "overview", "label": "Overview", "href": "/"},
+       {"id": "momentum", "label": "Momentum (M1)", "href": "/momentum/"},
+       {"id": "carry", "label": "Carry", "href": "/carry/"},
+       {"id": "seesaw", "label": "Seesaw", "href": "/seesaw/"},
+       {"id": "controls", "label": "Controls", "href": "/controls/"}]
 FORWARD = [
     {"id": "carry", "name": "BTC + ETH cash-and-carry", "start": "2026-10-05", "cp13": "2027-01-04", "cp26": "2027-04-05",
      "cash_line": True,
@@ -144,23 +140,30 @@ def summary(points):
     return {"value": v, "ret": v / BANKROLL - 1, "worst": dd}
 
 
-def live_book(book):
-    """What the overview needs to mark a strategy live: each coin's weight and last daily close."""
-    return [{"coin": p["coin"], "weight": p["weight"] if p["side"] == "long" else -abs(p["weight"]), "now": p["now"]} for p in book]
-
-
 def write(template, data, *out, title=None):
     css = open(os.path.join(HERE, "common.css"), encoding="utf-8").read()
     tpl = open(os.path.join(HERE, template), encoding="utf-8").read().replace("__CSS__", css)
     if title:
         tpl = tpl.replace("__TITLE__", html.escape(title))
-    page = "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">" \
-           "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\">" \
-           "<style>body{margin:0}</style></head><body>" \
-           + tpl.replace("__DATA__", json.dumps(data).replace("</", "<\\/")) + "</body></html>"
-    d = os.path.join(ROOT, "public", "lab", *out)
+    head, body = tpl.split("</style>", 1)
+    page = ("<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
+            "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\">"
+            "<style>body{margin:0}</style>" + head + "</style></head><body>"
+            + body.replace("__DATA__", json.dumps(data).replace("</", "<\\/")) + "</body></html>")
+    d = os.path.join(ROOT, "public", *out)
     os.makedirs(d, exist_ok=True)
     open(os.path.join(d, "index.html"), "w", encoding="utf-8").write(page)
+
+
+def write_redirects():
+    for page in NAV:
+        target = page["href"]
+        folder = os.path.join(ROOT, "public", "lab", target.strip("/"))
+        os.makedirs(folder, exist_ok=True)
+        with open(os.path.join(folder, "index.html"), "w", encoding="utf-8") as f:
+            f.write(f'<!doctype html><html lang="en"><meta charset="utf-8"><title>Strategy Lab moved</title>'
+                    f'<link rel="canonical" href="{target}"><meta http-equiv="refresh" content="0;url={target}">'
+                    f'<p>The Strategy Lab moved. <a href="{target}">Continue to {page["label"]}</a>.</p></html>')
 
 
 def main():
@@ -196,15 +199,15 @@ def main():
 
     # ---- overview / scoreboard
     btc = [{"d": p["d"], "e": p["b"]} for p in m1_points]
-    board = [{"id": "momentum", "name": "Momentum rule (M1)", "kind": "candidate", "href": "/lab/momentum/",
+    m1_dates = [(date.fromisoformat(M1_START) + timedelta(weeks=n)).isoformat() for n in REVIEW_WEEKS]
+    board = [{"id": "momentum", "name": "Momentum rule (M1)", "kind": "candidate", "href": "/momentum/",
               "what": "Bets on the memecoins that have been rising and against the ones that have been falling.",
-              "weeks": len(weeks), "equity": m1_points, "book": live_book(book), **summary(m1_points)}]
-    board += [{"id": c["id"], "name": c["name"], "kind": "control", "href": "/lab/controls/", "what": c["what"],
-               "weeks": len(c["weeks"]), "equity": c["equity"], "book": live_book(c["book"]), **summary(c["equity"])} for c in controls]
-    board.append({"id": "btc", "name": "Buy and hold BTC", "kind": "benchmark", "href": None,
-                  "what": "For reference: what the same money would do sitting in Bitcoin.",
-                  "weeks": len(weeks), "equity": btc, "book": [{"coin": "BTC", "weight": 1.0, "now": latest.get("BTCUSDT")}],
-                  **summary(btc)})
+              "equity": m1_points, "status": st, "checkpoints": m1_dates,
+              "bar": "Positive net return at week 26", **summary(m1_points)}]
+    board += [{"id": c["id"], "name": c["name"], "kind": "control", "href": "/controls/", "what": c["what"],
+               "equity": c["equity"], "status": st, **summary(c["equity"])} for c in controls]
+    board.append({"id": "btc", "name": "Hold BTC", "kind": "benchmark", "href": None,
+                  "what": "Reference return using BTC perpetual closes.", "equity": btc, "status": st, **summary(btc)})
     # ---- forward tests (started 2026-10-05; lab/forward_protocol.md)
     for f in FORWARD:
         fid = f["id"]
@@ -227,10 +230,12 @@ def main():
         write("forward.html", {"status": fst, "bankroll": BANKROLL, "repo": REPO, "strategy": f, "nav": NAV,
                                "equity": pts, "history": weekly_history(feq), "book": fbook, "proofs": fproofs},
               fid, title=f["name"])
-        board.insert(1 + FORWARD.index(f), {"id": fid, "name": f["name"], "kind": "candidate", "href": f"/lab/{fid}/",
-                                             "what": f["short"], "start": f["start"], "equity": pts, "book": [],
-                                             **summary(pts)})
-    write("overview.html", {"status": st, "bankroll": BANKROLL, "repo": REPO, "board": board}, )
+        bar = "Beat the +1.96% cash hurdle at week 26" if f["cash_line"] else "Positive net return and daily Sharpe ≥ 0.5 at week 26"
+        board.insert(1 + FORWARD.index(f), {"id": fid, "name": f["name"], "kind": "candidate", "href": f"/{fid}/",
+                                           "what": f["short"], "start": f["start"], "equity": pts, "status": fst,
+                                           "checkpoints": [f["cp13"], f["cp26"]], "bar": bar, **summary(pts)})
+    write("overview.html", {"start": M1_START, "bankroll": BANKROLL, "repo": REPO, "board": board})
+    write_redirects()
 
     print(f"built public/lab (overview, momentum, controls): {len(weeks)} week(s), {len(eq)} day(s) of results "
           f"(data through {html.escape(st.get('data_through', '?'))})")

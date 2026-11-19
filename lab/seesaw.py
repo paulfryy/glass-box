@@ -25,6 +25,7 @@ from concurrent.futures import ThreadPoolExecutor
 import numpy as np
 import pandas as pd
 import requests
+import funding
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -150,21 +151,6 @@ def refresh_hourly(H, need):
     return H.sort_index()
 
 
-def refresh_funding(F, symbols):
-    have = F.index.max().tz_convert(None).to_period("M") if len(F) else pd.Period("2026-08", "M")
-    now_m = pd.Timestamp.now(tz="UTC").tz_convert(None).to_period("M")
-    for m in pd.period_range(have + 1, now_m - 1, freq="M"):
-        with ThreadPoolExecutor(16) as ex:
-            got = dict(zip(symbols, ex.map(lambda s: m1.funding_month(s, str(m)), symbols)))
-        got = {s: f for s, f in got.items() if f is not None}
-        if not got:
-            print(f"  funding for {m} not published yet")
-            break
-        F = pd.concat([F, pd.DataFrame(got)])
-        print(f"  added funding for {m} ({len(got)} coins)")
-    return F
-
-
 def hourly_complete_through(H, C, lists, end_day, now=None):
     """Step end_day back while any coin it needs (the five large coins + that day's list) is missing hours that day.
     Coins without a daily close that day have stopped trading and don't count. After 20:00 UTC, accept what's there."""
@@ -230,11 +216,13 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--offline", action="store_true")
     a = ap.parse_args()
+    sp = os.path.join(OUT, "status.txt")
+    old = m1.read_status(sp)
     C, V, H, F = csv_load("daily_close"), csv_load("daily_volume"), csv_load("hourly"), csv_load("funding")
     if not a.offline:
         C, V = refresh_daily(C, V)
         csv_save(C, "daily_close"), csv_save(V, "daily_volume")
-    use = m1.complete_through(C)                           # hold back a day some coins haven't published yet
+    use = C.index.max() if a.offline else m1.complete_through(C)
     C, V = C[C.index <= use], V[V.index <= use]
     lists = weekly_lists(C, V)
     pd.DataFrame([{"week": f"{m:%Y-%m-%d}", "rank": i + 1, "symbol": s} for m, v in lists.items() for i, s in enumerate(v)]
@@ -246,12 +234,13 @@ def main():
         H = refresh_hourly(H, {s: days for s in need_coins})
         H = H[H.index >= START - pd.Timedelta(days=WINDOW // 24 + 6)]
         csv_save(H, "hourly")
-        F = refresh_funding(F, sorted(set(C.columns)))
+        F = funding.refresh(F, C.reindex(columns=need_coins), START, m1.funding_month)
         csv_save(F, "funding")
-    end_day = hourly_complete_through(H, C, lists, end_day)
+    end_day = (pd.Timestamp(old["data_through"], tz="UTC") if a.offline and old.get("data_through")
+               else hourly_complete_through(H, C, lists, end_day))
     if end_day < START:
-        open(os.path.join(OUT, "status.txt"), "w", newline="\n").write(
-            f"data_through={end_day:%Y-%m-%d}\nfunding_through={F.index.max():%Y-%m-%d}\nupdated_utc=\n")
+        open(sp, "w", newline="\n").write(
+            f"data_through={end_day:%Y-%m-%d}\nfunding_through=-\nfunding_missing_contract_days=0\nupdated_utc=\n")
         print(f"seesaw: starts {START:%Y-%m-%d}; data through {end_day:%Y-%m-%d}; nothing to trade yet")
         return
     held, R = held_positions(H, lists, end_day)
@@ -290,10 +279,9 @@ def main():
     pd.DataFrame({"symbol": last.index, "held_weight": last.round(6).values,
                   "close": [float(C[s].dropna().iloc[-1]) for s in last.index]}
                  ).to_csv(os.path.join(OUT, "latest.csv"), index=False, lineterminator="\n", encoding="utf-8")
-    sp = os.path.join(OUT, "status.txt")
-    old = dict(l.strip().split("=", 1) for l in open(sp) if "=" in l) if os.path.exists(sp) else {}
-    st = {"data_through": f"{end_day:%Y-%m-%d}", "funding_through": f"{F.index.max():%Y-%m-%d}" if len(F) else "-"}
-    st["updated_utc"] = old["updated_utc"] if all(old.get(k) == v for k, v in st.items()) and "updated_utc" in old else stamp
+    daily_held = held.abs().groupby(held.index.floor("D")).max()
+    st = {"data_through": f"{end_day:%Y-%m-%d}", **funding.coverage(daily_held, F)}
+    st["updated_utc"] = old.get("updated_utc", "") if a.offline else stamp
     open(sp, "w", newline="\n").write("".join(f"{k}={v}\n" for k, v in st.items()))
     print(f"seesaw paper equity ${eq['equity'].iloc[-1]:,.2f} after {len(eq)} day(s); {len(last)} positions held")
 

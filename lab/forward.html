@@ -11,11 +11,6 @@ __CSS__
 </style>
 
 <div class="wrap" style="padding-block:18px 0">
-  <nav class="tabs" aria-label="Sections">
-    <a href="/">This coin</a>
-    <a href="/#check">Check any coin</a>
-    <a href="/lab/" aria-current="page">Strategy lab</a>
-  </nav>
   <nav class="subnav" aria-label="Strategy lab pages" id="subnav"></nav>
 </div>
 <div class="wrap" id="lab"></div>
@@ -114,7 +109,9 @@ __CSS__
       ${hist.map(h => `<tr><td>${fmtDate(h.week)}${h.days < 7 ? ' <span class="muted">(so far)</span>' : ''}</td><td class="num ${cls(h.ret)}">${pct(h.ret, 2)}</td>
         <td class="num hide-sm">${pct(-h.cost, 2)}</td><td class="num hide-sm">${pct(h.funding, 2)}</td><td class="num ${cls(h.btc)}">${pct(h.btc, 2)}</td></tr>`).join('')}
     </tbody></table></div>` : '<p class="empty">No results yet.</p>'}
-    <p class="muted" style="font-size:13px;margin:0">Funding is published by Binance once a month (included through ${esc(D.status.funding_through ? fmtDate(D.status.funding_through) : '–')}), so recent weeks shift when each month's funding arrives.</p>
+    <p class="muted" style="font-size:13px;margin:0">Prices through ${D.status.data_through ? fmtDate(D.status.data_through) : 'pending'}.
+      Funding coverage through ${D.status.funding_through && D.status.funding_through !== '-' ? fmtDate(D.status.funding_through) : 'pending'}.
+      ${Number(D.status.funding_missing_contract_days) > 0 ? `Equity is provisional while ${Number(D.status.funding_missing_contract_days)} contract-days are missing.` : ''}</p>
   </section>
 
   <section style="display:grid;gap:12px" aria-label="Checkpoints">

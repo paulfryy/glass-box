@@ -1,33 +1,32 @@
-# Glass Box Coin
+# Strategy Lab
 
-A live, public, on-chain transparency page for one pump.fun coin: holders, trades, the creator's
-position and a red-flag checklist. Rebuilt every ~10 minutes by a GitHub Action and served by GitHub Pages.
+Public forward tests of fixed trading rules, each with a $5,000 paper account. The homepage shows daily-close results, data coverage, and review criteria. Former `/lab/` URLs redirect to the corresponding pages.
 
-- **Switch coins:** edit `mint` (and `image`) in `config.yaml` and commit. The page rebuilds on push.
-- **Refresh now:** Actions tab → "Refresh dashboard" → Run workflow.
-- **Secret:** `HELIUS_API_KEY` is stored as a repository secret and never appears in the page or code.
-- **Local test:** `pip install -r requirements.txt`, set `HELIUS_API_KEY`, run `python build.py`, open `public/index.html`.
+| Page | Experiment | Published positions |
+|---|---|---|
+| `/momentum/` | M1 weekly long/short memecoin momentum, started September 28, 2026 | `lab/positions.csv` |
+| `/carry/` | BTC and ETH spot/perpetual cash-and-carry, started October 5, 2026 | `lab/carry/positions.csv` |
+| `/seesaw/` | S1-smooth72, started October 5, 2026 | `lab/seesaw/positions/` |
+| `/controls/` | Equal-weight memecoins and long-only momentum | `lab/controls/` |
 
-## Strategy lab (`/lab/`)
+The [forward protocol](lab/forward_protocol.md) defines the carry and Seesaw rules. `lab/proofs/` contains OpenTimestamps proofs for the published candidate positions. The enclosing `pump.pro` workspace holds the original research in `reports/` and the token-launch archive in `launch/`. The former site's source is in [archive/coin-dashboard](archive/coin-dashboard/).
 
-Trading strategies tested in public with $5,000 paper accounts from 2026-09-28. No real money, not advice.
+## Run locally
 
-- `/lab/` overview and scoreboard; `/lab/momentum/` rule M1 (the candidate); `/lab/controls/` the controls
-  ("just buy memecoins" and long-only momentum, at spot costs).
-- `lab/m1.py` pulls new daily candles and funding from Binance's free archive (data.binance.vision), appends
-  each new Monday's positions (M1: `lab/positions.csv`; controls: `lab/controls/<id>/positions.csv`, never
-  rewritten) and writes each paper account's `equity.csv`. `lab/proof.py` stamps M1's weekly positions into
-  Bitcoin with OpenTimestamps. Both run in the "Momentum lab" workflow, started by the Worker's cron at 09:20
-  and 21:20 UTC (Binance publishes each daily file around 08:20 UTC).
-- `lab/render.py` builds the three pages from those committed files (stdlib only) inside the 10-minute
-  "Refresh dashboard" job. Shared styles: `lab/common.css`.
-- `lab/universe.yaml` is the frozen coin list. Nothing about any rule is re-tuned.
+```sh
+python -m pip install -r lab/requirements.txt
+python -m unittest discover -s lab -p 'test_*.py'
+python lab/verify.py
+python lab/render.py
+python -m http.server 8000 --directory public
+```
 
-### Forward tests (from the 2026-10-05 close)
-Two near-misses run as live paper accounts, rules fixed in `lab/forward_protocol.md` (SHA-256 in
-`lab/forward_protocol.sha256`) before they start; no backdating.
-- `/lab/carry/` — `lab/carry.py`: BTC + ETH cash-and-carry (half spot long, half perp short), weekly positions.
-- `/lab/seesaw/` — `lab/seesaw.py`: S1-smooth72 on a frozen 712-contract universe (`lab/seesaw/universe.json`);
-  hourly positions computed daily from Binance's archive, one file per day in `lab/seesaw/positions/`.
-Both run in the "Momentum lab" workflow; `lab/proof.py` stamps their positions into Bitcoin (`lab/proofs/carry/`,
-`lab/proofs/seesaw/`).
+`verify.py` recomputes all five accounts in a temporary copy and checks that saved results and position records replay. Pass `--base <git-revision>` after a refresh to check that older published positions were preserved.
+
+## Updates and publication
+
+GitHub Actions updates the three candidates, replays the saved accounts, stamps the position files, commits the new data, and calls the Pages workflow. The update runs at 09:20 and 21:20 UTC and can also be run from **Update Strategy Lab** in Actions. Source pushes to `main` rebuild the site. The build reads only saved lab files.
+
+Daily prices and monthly funding come from Binance's archive. Equity is provisional where funding for a held contract-day is missing. The updater retries missing completed months per contract, and late funding revises equity while the published positions stay fixed. Seesaw positions are computed once a day using data available before each simulated hour.
+
+The archived Cloudflare Worker still needs to be retired in Cloudflare if it is deployed. The current workflows require no Helius or Worker credentials.

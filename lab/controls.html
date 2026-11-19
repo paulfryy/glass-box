@@ -14,17 +14,12 @@ details.hold summary{cursor:pointer;font-family:var(--display);font-weight:600;f
 </style>
 
 <div class="wrap" style="padding-block:18px 0">
-  <nav class="tabs" aria-label="Sections">
-    <a href="/">This coin</a>
-    <a href="/#check">Check any coin</a>
-    <a href="/lab/" aria-current="page">Strategy lab</a>
-  </nav>
   <nav class="subnav" aria-label="Strategy lab pages">
-    <a href="/lab/">Overview</a>
-    <a href="/lab/momentum/">Momentum (M1)</a>
-    <a href="/lab/carry/">Carry</a>
-    <a href="/lab/seesaw/">Seesaw</a>
-    <a href="/lab/controls/" aria-current="page">Controls</a>
+    <a href="/">Overview</a>
+    <a href="/momentum/">Momentum (M1)</a>
+    <a href="/carry/">Carry</a>
+    <a href="/seesaw/">Seesaw</a>
+    <a href="/controls/" aria-current="page">Controls</a>
   </nav>
 </div>
 <div class="wrap" id="lab"></div>
@@ -47,36 +42,31 @@ details.hold summary{cursor:pointer;font-family:var(--display);font-weight:600;f
   const START = '2026-09-28';
   const COLOR = {basket: 'var(--muted)', longonly: 'var(--warn)'};
 
-  // live marks (indicative), same source as the momentum page
-  let live = null;
-  const mark = p => { const lp = live && live.prices[p.coin + 'USDT']; return lp ? {px: lp, live: true} : {px: p.now, live: false}; };
   const weekBase = c => { const wk = c.weeks[c.weeks.length - 1]; return !wk || wk === START ? D.bankroll : ((c.equity.find(r => r.d === wk) || {}).e || c.value); };
-  const pnl = (c, p) => { const m = mark(p); return m.px == null ? 0 : p.weight * weekBase(c) * (m.px / p.entry - 1); };
-  const liveValue = c => c.value * (1 + c.book.reduce((s, p) => { const m = mark(p); return s + (m.px == null || p.now == null ? 0 : p.weight * (m.px / p.now - 1)); }, 0));
+  const pnl = (c, p) => p.now == null ? 0 : p.weight * weekBase(c) * (p.now / p.entry - 1);
 
   function card(c){
-    const v = live ? liveValue(c) : c.value, r = v / D.bankroll - 1;
-    return `<div class="label">${live ? 'Right now · live estimate' : 'At the last daily close'}</div>
-      <div class="big mono">${usd(v)}</div>
-      <div class="row"><span class="mono ${cls(r)}"><b>${pct(r, 2)}</b> since ${fmtDate(START)}</span><span class="muted">Worst drop ${c.worst < 0 ? pct(c.worst, 1) : '0%'}</span>
-        <span class="muted">Official: ${usd(c.value)}</span></div>${bridge(c, v)}`;
+    return `<div class="label">At the last daily close</div>
+      <div class="big mono">${usd(c.value)}</div>
+      <div class="row"><span class="mono ${cls(c.ret)}"><b>${pct(c.ret, 2)}</b> since ${fmtDate(START)}</span>
+        <span class="muted">Worst drop ${c.worst < 0 ? pct(c.worst, 1) : '0%'}</span></div>${bridge(c)}`;
   }
   // positions' P&L (before costs) + trading costs = the account's change this week
-  function bridge(c, v){
+  function bridge(c){
     const wk = c.weeks[c.weeks.length - 1], h = (c.history || []).find(x => x.week === wk);
     if (!h) return `<div class="bridge">Trading costs for this week appear after its first daily close.</div>`;
-    const pos = c.book.reduce((t, p) => t + pnl(c, p), 0), cost = -h.cost * weekBase(c), acct = v - weekBase(c);
+    const pos = c.book.reduce((t, p) => t + pnl(c, p), 0), cost = -h.cost * weekBase(c), acct = c.value - weekBase(c);
     return `<div class="bridge" title="The holdings table uses Monday's sizes all week; the account also re-sizes positions at each daily close, so the parts can differ from the total by a few dollars. No funding: these controls buy coins outright.">
       <span>This week: positions <b class="mono ${cls(pos)}">${sgn$(pos)}</b></span><span>·</span>
       <span>trading costs <b class="mono ${cls(cost)}">${sgn$(cost)}</b></span><span>=</span>
-      <span>account <b class="mono ${cls(acct)}">${sgn$(acct)}</b>${live ? ' (live)' : ''}</span></div>`;
+      <span>account <b class="mono ${cls(acct)}">${sgn$(acct)}</b></span></div>`;
   }
   function holdings(c){
     if (!c.book.length) return '<p class="empty">No positions yet.</p>';
     const rows = c.book.slice().sort((a, b) => pnl(c, b) - pnl(c, a));
     return `<div class="tbl"><table><thead><tr><th>Coin</th><th class="r">Size</th><th class="r hide-sm">Entry</th><th class="r">Price move</th><th class="r">P&amp;L</th></tr></thead><tbody>
-      ${rows.map(p => { const m = mark(p); const mv = m.px == null ? null : m.px / p.entry - 1; const v = pnl(c, p);
-        return `<tr><td>${coinLink(p.coin)}${m.live || !live ? '' : '<sup>*</sup>'}</td><td class="num">${usd0(p.weight * weekBase(c))}</td><td class="num hide-sm">${price(p.entry)}</td>
+      ${rows.map(p => { const mv = p.now == null ? null : p.now / p.entry - 1; const v = pnl(c, p);
+        return `<tr><td>${coinLink(p.coin)}</td><td class="num">${usd0(p.weight * weekBase(c))}</td><td class="num hide-sm">${price(p.entry)}</td>
           <td class="num">${mv == null ? '–' : pct(mv)}</td><td class="num pl ${cls(v)}">${mv == null ? '–' : sgn$(v)}</td></tr>`; }).join('')}
     </tbody></table></div>`;
   }
@@ -98,18 +88,6 @@ details.hold summary{cursor:pointer;font-family:var(--display);font-weight:600;f
       ${series.map(s => `<polyline points="${s.pts.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ')}" fill="none" stroke="${s.color}" stroke-width="${s.w}" ${s.dash ? `stroke-dasharray="${s.dash}"` : ''}/>`).join('')}
     </svg><div class="legend">${series.map(s => `<span><svg class="key" width="26" height="10" aria-hidden="true"><line x1="1" y1="5" x2="25" y2="5" stroke="${s.color}" stroke-width="${s.w}" ${s.dash ? `stroke-dasharray="${s.dash}"` : ''} stroke-linecap="round"/></svg>${esc(s.name)}</span>`).join('')}</div>`;
   }
-  function renderLive(){
-    for (const c of D.controls) {
-      const a = document.getElementById('card-' + c.id); if (a) a.innerHTML = card(c);
-      const h = document.getElementById('hold-' + c.id); if (h) h.innerHTML = holdings(c);
-      const s = document.getElementById('sum-' + c.id); if (s) s.textContent = sgn$(c.book.reduce((t, p) => t + pnl(c, p), 0));
-    }
-    const t = document.getElementById('liveTime'); if (t && live) t.textContent = `Live prices ${localTime(live.asOf * 1000)}, indicative (Gate.io, MEXC and OKX futures).`;
-  }
-  async function loadLive(){
-    try { const j = await (await fetch('https://api.glassbox.gripe/prices', {cache: 'no-store'})).json(); if (j.ok) { live = j; renderLive(); } } catch (e) {}
-  }
-
   document.getElementById('lab').innerHTML = `
   <section class="intro">
     <div class="label">Strategy lab · controls</div>
@@ -135,18 +113,15 @@ details.hold summary{cursor:pointer;font-family:var(--display);font-weight:600;f
 
   <section style="display:grid;gap:12px" aria-label="This week's holdings">
     <h2>This week's holdings</h2>
-    <p class="muted" style="margin:0;font-size:13px" id="liveTime">Prices from the last daily close; live prices loading…</p>
+    <p class="muted" style="margin:0;font-size:13px">Prices through ${D.status.data_through ? fmtDate(D.status.data_through) : 'pending'}.</p>
     ${D.controls.map(c => `<details class="hold panel" ${c.id === 'longonly' ? 'open' : ''}>
-      <summary>${esc(c.name)} · ${c.book.length} coins · this week <span class="mono" id="sum-${c.id}">–</span></summary>
+      <summary>${esc(c.name)} · ${c.book.length} coins · this week <span class="mono">${sgn$(c.book.reduce((t, p) => t + pnl(c, p), 0))}</span></summary>
       <div id="hold-${c.id}" style="margin-top:10px">${holdings(c)}</div></details>`).join('')}
-    <p class="muted" style="margin:0;font-size:13px">Entry is the Monday daily close. P&amp;L is before costs.<sup>*</sup> marks a coin without a live price (last daily close shown). Positions are re-set each Monday and brought back to their target share at every daily close, the same way as the momentum rule.</p>
+    <p class="muted" style="margin:0;font-size:13px">Entry is the Monday daily close. P&amp;L is before costs. Positions reset each Monday and rebalance to their targets at each daily close.</p>
   </section>
 
   <footer class="foot">
-    <div><b>Not financial advice.</b> A research log with no real money. Nothing here is connected to the Glass Box coin.</div>
-    <div>Official numbers use Binance daily closes, updated around 09:20 UTC. <a href="${D.repo}/tree/main/lab/controls" target="_blank" rel="noopener">Positions and daily numbers are public.</a></div>
+    <div><a href="${D.repo}/tree/main/lab/controls" target="_blank" rel="noopener">Published positions and daily results</a></div>
   </footer>`;
-  renderLive();
-  loadLive(); setInterval(loadLive, 60000);
 })();
 </script>

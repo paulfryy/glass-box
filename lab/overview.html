@@ -7,10 +7,9 @@
 __CSS__
 .board td a{font-weight:600}
 .board .what{display:block;color:var(--muted);font-size:12.5px;font-weight:400;margin-top:2px}
-.kind.benchmark{background:var(--warn-soft);color:var(--warn)}
-.kinds{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
-.soon{border:1px dashed var(--line);border-radius:12px;padding:14px 16px;display:grid;gap:6px;background:transparent}
-.soon p{margin:0;color:var(--muted);font-size:14px}
+.board td{vertical-align:top}
+.coverage{display:block;font-size:.875rem;white-space:nowrap}
+.provisional{display:block;color:var(--muted);font-size:.875rem;margin-top:4px}
 .chart{position:relative}
 .chart svg{touch-action:pan-y}
 .tip{position:absolute;z-index:2;pointer-events:none;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12.5px;box-shadow:0 4px 14px rgba(0,0,0,.12);display:grid;gap:4px;min-width:250px}
@@ -22,17 +21,12 @@ __CSS__
 </style>
 
 <div class="wrap" style="padding-block:18px 0">
-  <nav class="tabs" aria-label="Sections">
-    <a href="/">This coin</a>
-    <a href="/#check">Check any coin</a>
-    <a href="/lab/" aria-current="page">Strategy lab</a>
-  </nav>
   <nav class="subnav" aria-label="Strategy lab pages">
-    <a href="/lab/" aria-current="page">Overview</a>
-    <a href="/lab/momentum/">Momentum (M1)</a>
-    <a href="/lab/carry/">Carry</a>
-    <a href="/lab/seesaw/">Seesaw</a>
-    <a href="/lab/controls/">Controls</a>
+    <a href="/" aria-current="page">Overview</a>
+    <a href="/momentum/">Momentum (M1)</a>
+    <a href="/carry/">Carry</a>
+    <a href="/seesaw/">Seesaw</a>
+    <a href="/controls/">Controls</a>
   </nav>
 </div>
 <div class="wrap" id="lab"></div>
@@ -47,7 +41,8 @@ __CSS__
   const usd = x => '$' + x.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
   const usd0 = x => '$' + Math.round(x).toLocaleString('en-US');
   const fmtDate = s => new Date(s + 'T00:00:00Z').toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC'});
-  const START = '2026-09-28';
+  const today = new Date().toISOString().slice(0, 10);
+  const START = D.start;
   const STYLE = {momentum: ['var(--accent)', ''], carry: ['var(--c5)', ''], seesaw: ['var(--c6)', ''],
                  basket: ['var(--muted)', '6 4'], longonly: ['var(--warn)', ''], btc: ['var(--btc)', '']};
 
@@ -55,7 +50,7 @@ __CSS__
   const key = (color, w, dash) => `<svg class="key" width="26" height="10" aria-hidden="true"><line x1="1" y1="5" x2="25" y2="5" stroke="${color}" stroke-width="${w}" ${dash ? `stroke-dasharray="${dash}"` : ''} stroke-linecap="round"/></svg>`;
   let G = null;   // chart geometry, kept for the hover crosshair
   function chart(){
-    const n = new Set(D.board.flatMap(s => s.equity.map(p => p.d))).size;
+    const n = new Set(D.board.flatMap(s => s.equity.map(p => p.d)).filter(d => d > START)).size;
     if (n < 2) return `<p class="empty">The comparison chart starts after the second daily close. The scoreboard above updates every day.</p>`;
     // align every strategy by date; later starters (the forward tests) begin at their own start date
     const dates = [START, ...[...new Set(D.board.flatMap(s => s.equity.map(p => p.d)))].filter(d => d > START).sort()];
@@ -114,74 +109,61 @@ __CSS__
     svg.addEventListener('pointerleave', hide);
   }
 
-  // live estimates: official value at the last daily close, moved by each position's change since that close
-  let live = null;
-  const localTime = ms => { const d = new Date(ms);
-    return `${d.toLocaleString('en-US', {hour: 'numeric', minute: '2-digit', timeZoneName: 'short'})} (${d.toISOString().slice(11, 16)} UTC)`; };
-  const liveValue = s => { if (!live) return null;
-    let move = 0, n = 0;
-    for (const p of s.book || []) { const lp = live.prices[p.coin + 'USDT']; if (lp && p.now) { move += p.weight * (lp / p.now - 1); n++; } }
-    return n ? s.value * (1 + move) : null; };
-  function board(){
-    const rows = D.board.map(s => { const v = liveValue(s); return {...s, lv: v ?? s.value, isLive: v != null}; })
-      .sort((a, b) => b.lv - a.lv);
-    return `<table class="board"><thead><tr><th>Strategy</th><th>Type</th><th class="r">${live ? 'Right now' : 'Value'}</th><th class="r">Since start</th><th class="r hide-sm">Worst drop</th></tr></thead><tbody>
-      ${rows.map(s => { const r = s.lv / D.bankroll - 1;
-        return `<tr><td>${s.href ? `<a href="${s.href}">${esc(s.name)}</a>` : `<b>${esc(s.name)}</b>`}<span class="what">${esc(s.what)}</span></td>
-        <td><span class="kind ${s.kind}">${s.kind}</span></td>
-        <td class="num">${usd(s.lv)}${s.isLive ? `<span class="what">official ${usd(s.value)}</span>` : ''}</td>
-        <td class="num ${cls(r)}">${!s.equity.length && s.start ? `<span class="what">starts ${fmtDate(s.start).replace(', 2026', '')}</span>` : `${pct(r, 2)}<span class="what">since ${fmtDate(s.start || START).replace(', 2026', '')}</span>`}</td><td class="num hide-sm">${s.worst < 0 ? pct(s.worst, 1) : '0%'}</td></tr>`; }).join('')}
-    </tbody></table>`;
+  function checkpoint(s) {
+    if (!s.checkpoints) return '—';
+    const next = s.checkpoints.find(d => d >= today);
+    return next ? `Week ${next === s.checkpoints[0] ? 13 : 26} · ${fmtDate(next)}`
+      : `Week 26 review · ${fmtDate(s.checkpoints[1])}`;
   }
-  async function loadLive(){
-    try {
-      const j = await (await fetch('https://api.glassbox.gripe/prices', {cache: 'no-store'})).json();
-      if (!j.ok) return;
-      live = j;
-      document.getElementById('board').innerHTML = board();
-      document.getElementById('boardTime').textContent = `Live estimate at ${localTime(j.asOf * 1000)}, refreshed every minute. Official values use Binance daily closes.`;
-    } catch (e) { /* keep the daily-close values */ }
+  function coverage(s) {
+    const st = s.status;
+    const priced = st.data_through ? fmtDate(st.data_through) : 'Pending';
+    const updated = st.updated_utc ? `${st.updated_utc} UTC` : 'Pending';
+    const funded = st.funding_through && st.funding_through !== '-' ? fmtDate(st.funding_through) : 'Pending';
+    const missing = Number(st.funding_missing_contract_days);
+    const provisional = !Number.isFinite(missing) || missing > 0;
+    const delayed = st.data_through && Date.parse(today) - Date.parse(st.data_through) > 2 * 86400000;
+    return `<span class="coverage">Prices through ${priced}<br>
+      Funding through ${funded}<br>Updated ${esc(updated)}</span>
+      ${delayed ? '<span class="provisional">Price update delayed</span>' : ''}
+      ${provisional ? `<span class="provisional">Provisional funding${missing > 0 ? ` · ${missing} missing contract-days` : ''}</span>` : ''}`;
   }
+  function metrics(s) {
+    return `<td class="num ${cls(s.ret)}">${s.equity.length ? pct(s.ret, 2) : '—'}
+      <span class="what">Since ${fmtDate(s.start || START)}</span></td>
+      <td class="num">${s.equity.length ? pct(s.worst, 1) : '—'}</td>`;
+  }
+  const candidates = D.board.filter(s => s.kind === 'candidate');
+  const comparisons = D.board.filter(s => s.kind !== 'candidate');
   document.getElementById('lab').innerHTML = `
   <section class="intro">
-    <div class="label">Strategy lab · public research log</div>
-    <h1>Trading strategies, tested in public</h1>
-    <p>Each strategy here runs a ${usd0(D.bankroll)} paper account (no real money) from ${fmtDate(START)}, with realistic trading costs. Every week's positions are published on GitHub (the candidate's are also stamped into Bitcoin), and losing weeks stay up. Most trading claims online can't show you that.</p>
+    <h1>Strategy Lab</h1>
+    <p>Trading rules tested in public with ${usd0(D.bankroll)} paper accounts. Follow the daily results, published positions, and review criteria.</p>
   </section>
-
-  <section class="panel" aria-label="Scoreboard">
-    <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
-      <h2>Scoreboard</h2><span class="muted" style="font-size:13px" id="boardTime">Values at the ${esc(D.status.data_through ? fmtDate(D.status.data_through) : '–')} daily close (UTC) · live prices loading…</span>
-    </div>
-    <div class="tbl" id="board">${board()}</div>
+  <section class="panel" aria-label="Forward tests">
+    <h2>Forward tests</h2>
+    <div class="tbl"><table class="board"><thead><tr><th scope="col">Strategy</th><th scope="col" class="r">Net return</th><th scope="col" class="r">Max drawdown</th>
+      <th scope="col">Checkpoint</th><th scope="col">Data coverage</th></tr></thead><tbody>
+      ${candidates.map(s => `<tr><td><a href="${s.href}">${esc(s.name)}</a><span class="what">${esc(s.what)}</span></td>
+        ${metrics(s)}<td><b>${checkpoint(s)}</b><span class="what">${esc(s.bar)}</span></td><td>${coverage(s)}</td></tr>`).join('')}
+    </tbody></table></div>
+    <p class="normal">Provisional results omit funding for missing contract-days. Equity updates when those funding records arrive.</p>
+  </section>
+  <section class="panel" aria-label="Daily account history">
+    <h2>Daily account history</h2>
     <div class="chart">${chart()}</div>
     <div class="legend">${D.board.map(s => `<span>${key(STYLE[s.id][0], s.id === 'momentum' ? 2.5 : 1.8, STYLE[s.id][1])}${esc(s.name)}</span>`).join('')}</div>
-    <p class="normal"><b>Read this carefully:</b> a table like this invites you to back whatever is on top. Don't. With several strategies running, one of them will usually look great for a few months by luck alone. Only a candidate's result counts as evidence, judged at its checkpoints, not by rank on any given day.</p>
   </section>
-
-  <section aria-label="What the labels mean" style="display:grid;gap:12px">
-    <h2>What the labels mean</h2>
-    <div class="kinds">
-      <div class="ev"><span class="kind candidate">candidate</span><h3>A strategy we think might work</h3><p>It passed a backtest we wrote down and fingerprinted before looking at the results. Live results are the real test.</p></div>
-      <div class="ev"><span class="kind control">control</span><h3>What a typical buyer would do</h3><p>Simple approaches we expect to do worse. They show whether a candidate is adding anything beyond just owning memecoins.</p></div>
-      <div class="ev"><span class="kind benchmark">benchmark</span><h3>Doing nothing clever</h3><p>The same money sitting in Bitcoin, for reference.</p></div>
-    </div>
+  <section class="panel" aria-label="Comparison accounts">
+    <h2>Comparison accounts</h2>
+    <div class="tbl"><table class="board"><thead><tr><th scope="col">Account</th><th scope="col" class="r">Net return</th><th scope="col" class="r">Max drawdown</th></tr></thead><tbody>
+      ${comparisons.map(s => `<tr><td>${s.href ? `<a href="${s.href}">${esc(s.name)}</a>` : `<b>${esc(s.name)}</b>`}<span class="what">${esc(s.what)}</span></td>${metrics(s)}</tr>`).join('')}
+    </tbody></table></div>
   </section>
-
-  <section aria-label="Coming next" style="display:grid;gap:12px">
-    <h2>Coming next</h2>
-    <div class="soon"><span class="kind control" style="justify-self:start">control · in preparation</span><h3>Buy every pump.fun graduate</h3>
-      <p>A live account that buys every coin the moment it graduates from pump.fun's bonding curve and sells after a fixed time, with real fees. Our research says this loses money; this will show it happening, day by day.</p></div>
-    <div class="soon"><span class="kind candidate" style="justify-self:start">candidates · must pass first</span><h3>New strategies</h3>
-      <p>A new strategy only gets a page after it passes a backtest whose rules were fixed and fingerprinted before we saw any results. Ideas that fail get written up, not hidden.</p></div>
-  </section>
-
   <footer class="foot">
-    <div><b>Not financial advice, and not a signals service.</b> This is a research log with no real money. Nothing here is connected to the Glass Box coin.</div>
-    <div>Data: Binance's free public archive, updated daily around 09:20 UTC. <a href="${D.repo}/tree/main/lab" target="_blank" rel="noopener">All code and numbers are public.</a></div>
+    <div>Paper results use Binance archive data. <a href="${D.repo}/tree/main/lab">Browse the lab code, positions, and proof files.</a></div>
+    <div><a href="${D.repo}/blob/main/lab/forward_protocol.md">Read the carry and Seesaw protocol.</a></div>
   </footer>`;
-
   attachHover();
-  loadLive(); setInterval(loadLive, 60000);
 })();
 </script>

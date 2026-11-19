@@ -30,6 +30,7 @@ from concurrent.futures import ThreadPoolExecutor
 import numpy as np
 import pandas as pd
 import requests
+import funding
 import yaml
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -238,20 +239,7 @@ def refresh(symbols):
             C.loc[t, s] = row["close"]
             V.loc[t, s] = row["quote_volume"]
     C, V, _ = fill_gaps(C, V, days=GAP_DAYS(C))            # days Binance skipped and published later
-    # funding: every completed month after the last month we hold, if it's published
-    have = F.index.max().tz_convert(None).to_period("M") if len(F) else pd.Period("2024-12", "M")
-    now_m = pd.Timestamp.now(tz="UTC").tz_convert(None).to_period("M")
-    for m in pd.period_range(have + 1, now_m - 1, freq="M"):
-        month = {}
-        for s in symbols:
-            f = funding_month(s, str(m))
-            if f is not None:
-                month[s] = f
-        if not month:
-            print(f"  funding for {m} not published yet")
-            break
-        F = pd.concat([F, pd.DataFrame(month)])
-        print(f"  added funding for {m} ({len(month)} coins)")
+    F = funding.refresh(F, C.reindex(columns=symbols), START, funding_month)
     save(C, "closes"), save(V, "volumes"), save(F, "funding")
     print(f"closes through {C.index.max():%Y-%m-%d} (was {last:%Y-%m-%d})")
     return C, V, F
@@ -341,8 +329,13 @@ def publish(W, C, pos_path, stamp):
                  "weight": round(float(x), 6), "entry_close": float(C.loc[m, s]), "published_utc": stamp} for s, x in w.items()]
     if add:
         os.makedirs(os.path.dirname(pos_path), exist_ok=True)
-        pd.concat([pos, pd.DataFrame(add)], ignore_index=True).to_csv(pos_path, index=False, lineterminator="\n")
+        append_positions(pos_path, add)
         print(f"{os.path.relpath(pos_path, HERE)}: published {sorted({r['week'] for r in add})}")
+
+
+def append_positions(path, rows):
+    exists = os.path.exists(path)
+    pd.DataFrame(rows).to_csv(path, mode="a", header=not exists, index=False, lineterminator="\n")
 
 
 def account(W, C, F, btc, path, **costs):
@@ -357,17 +350,26 @@ def account(W, C, F, btc, path, **costs):
     return eq
 
 
+def read_status(path):
+    if not os.path.exists(path):
+        return {}
+    with open(path, encoding="utf-8") as f:
+        return dict(line.strip().split("=", 1) for line in f if "=" in line)
+
+
 # ---------------------------------------------------------------- main
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--offline", action="store_true", help="skip the download, recompute from lab/data")
     a = ap.parse_args()
+    sp = os.path.join(HERE, "status.txt")
+    old = read_status(sp)
     symbols = yaml.safe_load(open(os.path.join(HERE, "universe.yaml"), encoding="utf-8"))["perps"]
     if a.offline:
         C, V, F = load("closes"), load("volumes"), load("funding")
     else:
         C, V, F = refresh(symbols + ["BTCUSDT"])
-    use = complete_through(C)                              # don't act on a day some coins haven't published yet
+    use = pd.Timestamp(old["data_through"], tz="UTC") if a.offline and old.get("data_through") else complete_through(C)
     C, V, F = C[C.index <= use], V[V.index <= use], F[F.index <= use]
     btc = C.pop("BTCUSDT")
     V = V.drop(columns=["BTCUSDT"], errors="ignore")
@@ -381,6 +383,7 @@ def main():
     publish(W, C, os.path.join(HERE, "positions.csv"), stamp)
     W = honor_published(W, C.notna() & C.shift(-1).notna(), os.path.join(HERE, "positions.csv"), "M1")
     eq = account(W, C, F, btc, os.path.join(HERE, "equity.csv"))
+    held = W.shift(1).loc[W.index > START]
     # 2. controls: same data and start date, spot costs, no funding
     for cid, (fn, fee, slip, fund) in CONTROLS.items():
         Wc = fn(C, E)
@@ -389,14 +392,10 @@ def main():
         ec = account(Wc, C, F, btc, os.path.join(HERE, "controls", cid, "equity.csv"), fee_bps=fee, slip_bps=slip, funding=fund)
         print(f"control {cid}: ${ec['equity'].iloc[-1] if len(ec) else BANKROLL:,.2f}")
     latest = {s: float(C[s].dropna().iloc[-1]) for s in C.columns if C[s].notna().any()}
-    latest["BTCUSDT"] = float(btc.dropna().iloc[-1])          # for the live BTC benchmark on the overview
+    latest["BTCUSDT"] = float(btc.dropna().iloc[-1])
     pd.Series(latest, name="close").to_csv(os.path.join(HERE, "latest.csv"), index_label="symbol")
-    # status: only touch the timestamp when the data actually moved, so idle runs commit nothing
-    sp = os.path.join(HERE, "status.txt")
-    old = dict(line.strip().split("=", 1) for line in open(sp) if "=" in line) if os.path.exists(sp) else {}
-    st = {"data_through": f"{C.index.max():%Y-%m-%d}", "funding_through": f"{F.index.max():%Y-%m-%d}"}
-    same = all(old.get(k) == v for k, v in st.items()) and "updated_utc" in old
-    st["updated_utc"] = old["updated_utc"] if same else stamp
+    st = {"data_through": f"{C.index.max():%Y-%m-%d}", **funding.coverage(held, F)}
+    st["updated_utc"] = old.get("updated_utc", "") if a.offline else stamp
     open(sp, "w", newline="\n").write("".join(f"{k}={v}\n" for k, v in st.items()))
     print(f"paper equity ${eq['equity'].iloc[-1] if len(eq) else BANKROLL:,.2f} after {len(eq)} day(s)")
 
