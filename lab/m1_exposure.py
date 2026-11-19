@@ -1,4 +1,4 @@
-"""Forward paper comparison of three exposure rules on the published M1 book."""
+"""Forward and historical comparisons of three exposure rules on the published M1 book."""
 
 import pandas as pd
 
@@ -10,6 +10,7 @@ FIXED = 0.50
 ACCOUNTS = ("m1_full", "m1_half", "m1_volatility")
 FOLDER = "m1-exposure"
 LOG = f"{FOLDER}/scales.csv"
+REPLAY = f"{FOLDER}/replay"
 
 
 def scale_for(week, gross):
@@ -20,6 +21,17 @@ def scale_for(week, gross):
         return None, 0.0
     annualized = float(window.std() * 365**0.5)
     return annualized, min(1.0, TARGET / annualized) if annualized else 1.0
+
+
+def scale_record(label, gross):
+    volatility, scale = scale_for(pd.Timestamp(label, tz="UTC"), gross)
+    return {"week": label, "annualized_volatility": None if volatility is None else round(volatility, 8),
+            "scale": round(scale, 8)}
+
+
+def replay_scales(weeks, first, gross):
+    return pd.DataFrame([scale_record(label, gross) for label in sorted(set(weeks)) if first <= label < START],
+                        columns=["week", "annualized_volatility", "scale"])
 
 
 def weekly_scales(weeks, close_dates, scales, gross, now):
@@ -33,10 +45,7 @@ def weekly_scales(weeks, close_dates, scales, gross, now):
             continue
         if not week + pd.Timedelta(days=1) <= now < week + pd.Timedelta(days=3):
             continue
-        volatility, scale = scale_for(week, gross)
-        decisions.append({"week": label,
-                          "annualized_volatility": None if volatility is None else round(volatility, 8),
-                          "scale": round(scale, 8), "published_utc": now.strftime("%Y-%m-%d %H:%M")})
+        decisions.append({**scale_record(label, gross), "published_utc": now.strftime("%Y-%m-%d %H:%M")})
     return decisions
 
 

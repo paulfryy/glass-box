@@ -16,6 +16,14 @@ __CSS__
   const date = value => new Intl.DateTimeFormat('en-US', {dateStyle:'medium', timeZone:'UTC'}).format(new Date(value + 'T00:00:00Z'));
   const pct = value => (Number(value) * 100).toFixed(2) + '%';
   const usd = value => value.toLocaleString('en-US', {style:'currency', currency:'USD'});
+  const replayThrough = D.replay[0].equity.at(-1)?.d;
+  function results(accounts) {
+    return `<div class="tbl"><table class="exposure-table"><thead><tr><th scope="col">Account</th><th scope="col" class="r">Value</th><th scope="col" class="r">Net return</th><th scope="col" class="r">Max drawdown</th><th scope="col" class="r">Sharpe</th></tr></thead><tbody>
+      ${accounts.map(a => `<tr><td><b>${esc(a.name)}</b><span class="muted">${esc(a.what)}</span>${Number(a.status.funding_missing_contract_days) > 0 ? '<span class="muted">Provisional funding</span>' : ''}</td>
+        <td class="num">${a.equity.length ? usd(a.value) : '—'}</td><td class="num">${a.equity.length ? pct(a.ret) : '—'}</td>
+        <td class="num">${a.equity.length ? pct(a.worst) : '—'}</td><td class="num">${a.sharpe == null ? '—' : a.sharpe.toFixed(2)}</td></tr>`).join('')}
+      </tbody></table></div>`;
+  }
   document.getElementById('subnav').innerHTML = D.nav.map(n => `<a href="${n.href}"${n.id === 'm1-exposure' ? ' aria-current="page"' : ''}>${esc(n.label)}</a>`).join('');
   document.getElementById('lab').innerHTML = `
     <section class="intro">
@@ -25,12 +33,14 @@ __CSS__
     </section>
     <section class="panel" aria-label="Paper account results">
       <h2>Paper account results</h2>
-      <div class="tbl"><table class="exposure-table"><thead><tr><th scope="col">Account</th><th scope="col" class="r">Value</th><th scope="col" class="r">Net return</th><th scope="col" class="r">Max drawdown</th><th scope="col" class="r">Sharpe</th></tr></thead><tbody>
-      ${D.accounts.map(a => `<tr><td><b>${esc(a.name)}</b><span class="muted">${esc(a.what)}</span>${Number(a.status.funding_missing_contract_days) > 0 ? '<span class="muted">Provisional funding</span>' : ''}</td>
-        <td class="num">${a.equity.length ? usd(a.value) : '—'}</td><td class="num">${a.equity.length ? pct(a.ret) : '—'}</td>
-        <td class="num">${a.equity.length ? pct(a.worst) : '—'}</td><td class="num">${a.sharpe == null ? '—' : a.sharpe.toFixed(2)}</td></tr>`).join('')}
-      </tbody></table></div>
+      ${results(D.accounts)}
       <p class="normal">Sharpe is annualized from daily net returns and appears after 28 closes. <a href="/#comparison">Compare the account histories</a>.</p>
+    </section>
+    <section class="panel" id="replay" aria-label="Historical replay">
+      <h2>Historical replay</h2>
+      <p>${replayThrough ? `${date(D.replay[0].start)} through ${date(replayThrough)}.` : 'Waiting for historical results.'} This retrospective simulation uses the original published M1 positions and sizes each capped week using the preceding 28 closes. Missing funding will revise the results when it arrives.</p>
+      ${results(D.replay)}
+      <p><a href="/?comparison=replay#comparison">Chart the historical replay</a> · <a href="${D.repo}/tree/main/lab/m1-exposure/replay">Replay inputs and results</a></p>
     </section>
     <section class="panel" aria-label="Published weekly decisions">
       <h2>Published weekly decisions</h2>

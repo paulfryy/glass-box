@@ -15,6 +15,7 @@ __CSS__
 .chart-picker{border:0;margin:0;padding:0;min-width:0}
 .chart-picker legend{font-weight:600;margin-bottom:4px}
 .chart-picker .legend{gap:4px 16px;margin:0}
+.chart-modes{display:flex;gap:4px 16px;flex-wrap:wrap;margin-bottom:8px}
 .chart-picker label{display:flex;align-items:center;gap:6px;min-height:32px;cursor:pointer}
 .chart-picker input{accent-color:var(--accent);width:16px;height:16px;margin:0}
 .chart-actions{display:flex;gap:8px;margin:4px 0 6px}
@@ -146,6 +147,8 @@ __CSS__
   }
   const candidates = D.board.filter(s => s.kind === 'candidate');
   const comparisons = D.board.filter(s => s.kind !== 'candidate');
+  const groups = {paper: D.board, replay: D.replay};
+  let mode = new URLSearchParams(window.location.search).get('comparison') === 'replay' ? 'replay' : 'paper';
   document.getElementById('lab').innerHTML = `
   <section class="intro">
     <h1>Strategy Lab</h1>
@@ -163,9 +166,17 @@ __CSS__
   <section class="panel" id="comparison" aria-label="Daily account history">
     <h2>Daily account history</h2>
     <fieldset class="chart-picker">
+      <legend>Results</legend>
+      <div class="chart-modes">
+        <label><input type="radio" name="chartMode" value="paper" ${mode === 'paper' ? 'checked' : ''}>Published paper accounts</label>
+        <label><input type="radio" name="chartMode" value="replay" ${mode === 'replay' ? 'checked' : ''}>Historical M1 replay</label>
+      </div>
+    </fieldset>
+    <p class="normal" id="replayNote" hidden>Retrospective simulation on published M1 positions. <a href="/m1-exposure/#replay">See replay returns and drawdowns</a>.</p>
+    <fieldset class="chart-picker">
       <legend>Compare accounts</legend>
       <div class="chart-actions"><button type="button" id="chartAll">Select all</button><button type="button" id="chartClear">Clear selection</button></div>
-      <div class="legend">${D.board.map(s => `<label><input type="checkbox" value="${s.id}" checked>${key(STYLE[s.id][0], s.id === 'momentum' ? 2.5 : 1.8, STYLE[s.id][1])}${esc(s.name)}</label>`).join('')}</div>
+      ${Object.entries(groups).map(([group, accounts]) => `<div class="legend" data-chart-group="${group}">${accounts.map(s => `<label><input type="checkbox" value="${s.id}" checked>${key(STYLE[s.id][0], s.id === 'momentum' ? 2.5 : 1.8, STYLE[s.id][1])}${esc(s.name)}</label>`).join('')}</div>`).join('')}
     </fieldset>
     <div class="chart" id="chartView" aria-live="polite"></div>
   </section>
@@ -179,17 +190,24 @@ __CSS__
     <div>Paper results use Binance archive data. <a href="${D.repo}/tree/main/lab">Browse the lab code, positions, and proof files.</a></div>
     <div><a href="${D.repo}/blob/main/lab/forward_protocol.md">Read the carry and Seesaw protocol.</a></div>
   </footer>`;
-  const options = [...document.querySelectorAll('.chart-picker input[type="checkbox"]')];
+  const pickers = [...document.querySelectorAll('[data-chart-group]')];
+  const options = () => [...document.querySelectorAll(`[data-chart-group="${mode}"] input`)];
   function drawComparison(){
-    const selected = new Set(options.filter(option => option.checked).map(option => option.value));
-    document.getElementById('chartView').innerHTML = chart(D.board.filter(s => selected.has(s.id)));
+    pickers.forEach(picker => { picker.hidden = picker.dataset.chartGroup !== mode; });
+    document.getElementById('replayNote').hidden = mode !== 'replay';
+    const selected = new Set(options().filter(option => option.checked).map(option => option.value));
+    document.getElementById('chartView').innerHTML = chart(groups[mode].filter(s => selected.has(s.id)));
     attachHover();
   }
   function selectAccounts(checked){
-    options.forEach(option => { option.checked = checked; });
+    options().forEach(option => { option.checked = checked; });
     drawComparison();
   }
-  options.forEach(option => option.addEventListener('change', drawComparison));
+  document.querySelectorAll('[data-chart-group] input').forEach(option => option.addEventListener('change', drawComparison));
+  document.querySelectorAll('input[name="chartMode"]').forEach(option => option.addEventListener('change', () => {
+    mode = option.value;
+    drawComparison();
+  }));
   document.getElementById('chartAll').addEventListener('click', () => selectAccounts(true));
   document.getElementById('chartClear').addEventListener('click', () => selectAccounts(false));
   drawComparison();

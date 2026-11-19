@@ -24,6 +24,8 @@ python -m http.server 8000 --directory public
 
 `verify.py` recomputes the active paper accounts in a temporary copy and checks that saved results and position records replay. Pass `--base <git-revision>` after a refresh to check that older published positions were preserved. See the [M1 exposure protocol](lab/m1_exposure_protocol.md) for the comparison and publication rules.
 
+The M1 exposure replay starts at the September 28, 2026 close using the original M1 paper positions. Sizing uses the preceding 28 closes, including a warm-up reconstructed from saved price data and the frozen M1 rule. The retrospective series stops at the November 23 close. Simulated decisions and equity are saved under `lab/m1-exposure/replay/`. The paper comparison uses a separate weekly decision log and starts with its first published decision.
+
 ## Updates and publication
 
 GitHub Actions updates the three candidates, replays the saved accounts, stamps the position files, commits the new data, and calls the Pages workflow. The update runs at 09:20 and 21:20 UTC and can also be run from **Update Strategy Lab** in Actions. Source pushes to `main` rebuild the site. The build reads only saved lab files.

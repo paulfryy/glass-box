@@ -144,28 +144,34 @@ def summary(points):
     return {"value": v, "ret": v / BANKROLL - 1, "worst": dd}
 
 
-def exposure_comparison():
-    log = rows(exposure.LOG)
-    start = log[0]["week"] if log else exposure.START
+def exposure_accounts(folder, start):
     labels = (
-        ("M1 full exposure", "M1 at its original sizing, starting with the exposure comparisons."),
+        ("M1 full exposure", "Holds M1 at its original sizing."),
         ("M1 half exposure", "Always holds 50% of M1’s position weights during an active week."),
         ("M1 volatility cap", "Cuts position weights when trailing M1 volatility exceeds 20% annualized."),
     )
     accounts = []
     for name, (label, description) in zip(exposure.ACCOUNTS, labels):
-        folder = f"{exposure.FOLDER}/{name}"
-        equity = rows(f"{folder}/equity.csv")
+        account_folder = f"{folder}/{name}"
+        equity = rows(f"{account_folder}/equity.csv")
         points = equity_points(equity)
         daily = [float(r["net"]) for r in equity]
         volatility = stdev(daily) if len(daily) > 1 else 0
         sharpe = mean(daily) / volatility * 365**0.5 if volatility and len(daily) >= 28 else None
         accounts.append({"id": name, "name": label, "what": description, "kind": "control", "start": start,
-                         "href": "/m1-exposure/", "equity": points, "status": status(f"{folder}/status.txt"),
+                         "href": "/m1-exposure/", "equity": points, "status": status(f"{account_folder}/status.txt"),
                          "sharpe": sharpe, **summary(points)})
-    write("exposure.html", {"accounts": accounts, "start": start, "schedule": exposure.START, "bankroll": BANKROLL,
-                            "scales": log[::-1], "nav": NAV, "repo": REPO}, exposure.FOLDER)
     return accounts
+
+
+def exposure_comparisons():
+    log = rows(exposure.LOG)
+    start = log[0]["week"] if log else exposure.START
+    accounts = exposure_accounts(exposure.FOLDER, start)
+    replay = exposure_accounts(exposure.REPLAY, M1_START)
+    write("exposure.html", {"accounts": accounts, "start": start, "schedule": exposure.START, "bankroll": BANKROLL,
+                            "scales": log[::-1], "replay": replay, "nav": NAV, "repo": REPO}, exposure.FOLDER)
+    return accounts, replay
 
 
 def write(template, data, *out, title=None):
@@ -234,7 +240,8 @@ def main():
               "bar": "Positive net return at week 26", **summary(m1_points)}]
     board += [{"id": c["id"], "name": c["name"], "kind": "control", "href": "/controls/", "what": c["what"],
                "equity": c["equity"], "status": st, **summary(c["equity"])} for c in controls]
-    board += exposure_comparison()
+    accounts, exposure_replay = exposure_comparisons()
+    board += accounts
     board.append({"id": "btc", "name": "Hold BTC", "kind": "benchmark", "href": None,
                   "what": "Reference return using BTC perpetual closes.", "equity": btc, "status": st, **summary(btc)})
     # ---- forward tests (started 2026-10-05; lab/forward_protocol.md)
@@ -263,7 +270,7 @@ def main():
         board.insert(1 + FORWARD.index(f), {"id": fid, "name": f["name"], "kind": "candidate", "href": f"/{fid}/",
                                            "what": f["short"], "start": f["start"], "equity": pts, "status": fst,
                                            "checkpoints": [f["cp13"], f["cp26"]], "bar": bar, **summary(pts)})
-    write("overview.html", {"start": M1_START, "bankroll": BANKROLL, "repo": REPO, "board": board})
+    write("overview.html", {"start": M1_START, "bankroll": BANKROLL, "repo": REPO, "board": board, "replay": exposure_replay})
     write_redirects()
 
     print(f"built public/lab (overview, momentum, controls): {len(weeks)} week(s), {len(eq)} day(s) of results "

@@ -375,9 +375,30 @@ def run_exposure_comparisons(book, closes, rates, btc, base_equity, now, offline
     if scales.empty:
         return
 
+    write_exposure_accounts(path.parent, book, closes, rates, btc, scales)
+
+
+def run_exposure_replay(book, closes, rates, btc):
+    end = pd.Timestamp(exposure.START, tz="UTC")
+    closes = closes.loc[:end]
+    book, rates, btc = book.loc[:end], rates.loc[:end], btc.loc[:end]
+    gross = run(book, closes, rates, funding=False)["gross"].iloc[:-1].round(6)
+    gross.index += pd.Timedelta(days=1)
+
+    root = Path(HERE)
+    weeks = pd.read_csv(root / "positions.csv", usecols=["week"])["week"]
+    scales = exposure.replay_scales(weeks[weeks <= closes.index.max().strftime("%Y-%m-%d")], START.date().isoformat(), gross)
+    if not scales.empty:
+        folder = root / exposure.REPLAY
+        folder.mkdir(parents=True, exist_ok=True)
+        scales.to_csv(folder / "scales.csv", index=False, lineterminator="\n")
+        write_exposure_accounts(folder, book, closes, rates, btc, scales)
+
+
+def write_exposure_accounts(folder, book, closes, rates, btc, scales):
     first = pd.Timestamp(scales["week"].min(), tz="UTC")
     for name, scale in exposure.exposure_by_date(book.index, scales).items():
-        out = path.parent / name
+        out = folder / name
         out.mkdir(exist_ok=True)
         weights = book.mul(scale, axis=0)
         account(weights, closes, rates, btc, out / "equity.csv", start=first)
@@ -414,6 +435,7 @@ def main():
     W = honor_published(W, C.notna() & C.shift(-1).notna(), os.path.join(HERE, "positions.csv"), "M1")
     eq = account(W, C, F, btc, os.path.join(HERE, "equity.csv"))
     run_exposure_comparisons(W, C, F, btc, eq, now, a.offline)
+    run_exposure_replay(W, C, F, btc)
     held = W.shift(1).loc[W.index > START]
     # 2. controls: same data and start date, spot costs, no funding
     for cid, (fn, fee, slip, fund) in CONTROLS.items():

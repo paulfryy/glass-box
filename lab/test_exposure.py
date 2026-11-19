@@ -30,6 +30,26 @@ class ExposureTest(unittest.TestCase):
         self.assertFalse(exposure.weekly_scales(weeks, closes, scales, gross, self.week + pd.Timedelta(hours=23)))
         self.assertFalse(exposure.weekly_scales(weeks, closes, scales, gross, self.week + pd.Timedelta(days=3)))
 
+    def test_replay_ends_at_forward_start_and_keeps_logs_separate(self):
+        dates = pd.date_range(m1.START - pd.Timedelta(days=35), self.week + pd.Timedelta(days=2))
+        closes = pd.DataFrame({"X": list(range(100, 100 + len(dates)))}, index=dates)
+        book = pd.DataFrame(1.0, index=dates, columns=closes.columns)
+        rates = book * 0.0
+
+        with TemporaryDirectory() as tmp, patch.object(m1, "HERE", tmp):
+            root = Path(tmp)
+            start = m1.START.strftime("%Y-%m-%d")
+            pd.DataFrame({"week": [start, exposure.START]}).to_csv(root / "positions.csv", index=False)
+            m1.run_exposure_replay(book, closes, rates, closes["X"])
+            replay = root / exposure.REPLAY
+            scales = pd.read_csv(replay / "scales.csv")
+            self.assertEqual(scales.week.tolist(), [start])
+            self.assertEqual(list(scales.columns), ["week", "annualized_volatility", "scale"])
+            self.assertFalse((root / exposure.LOG).exists())
+            for name in exposure.ACCOUNTS:
+                equity = pd.read_csv(replay / name / "equity.csv")
+                self.assertEqual(equity.iloc[-1].date, exposure.START)
+
     def test_comparisons_use_engine_costs_and_replay_frozen_scales(self):
         closes_idx = pd.date_range(self.week, periods=3)
         closes = pd.DataFrame({"X": [1.0, 1.1, 1.0]}, index=closes_idx)

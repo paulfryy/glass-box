@@ -41,6 +41,7 @@ def check_history(base, current):
 
 def check_equity(replayed):
     files = list(EQUITY)
+    files.extend(f"{exposure.REPLAY}/{name}/equity.csv" for name in exposure.ACCOUNTS)
     if (LAB / exposure.LOG).exists():
         files.extend(f"{exposure.FOLDER}/{name}/equity.csv" for name in exposure.ACCOUNTS)
     for name in files:
