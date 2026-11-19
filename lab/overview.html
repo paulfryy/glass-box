@@ -12,6 +12,13 @@ __CSS__
 .provisional{display:block;color:var(--muted);font-size:.875rem;margin-top:4px}
 .chart{position:relative}
 .chart svg{touch-action:pan-y}
+.chart-picker{border:0;margin:0;padding:0;min-width:0}
+.chart-picker legend{font-weight:600;margin-bottom:4px}
+.chart-picker .legend{gap:4px 16px;margin:0}
+.chart-picker label{display:flex;align-items:center;gap:6px;min-height:32px;cursor:pointer}
+.chart-picker input{accent-color:var(--accent);width:16px;height:16px;margin:0}
+.chart-actions{display:flex;gap:8px;margin:4px 0 6px}
+.chart-actions button{font:inherit;color:var(--accent);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:4px 8px;cursor:pointer}
 .tip{position:absolute;z-index:2;pointer-events:none;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12.5px;box-shadow:0 4px 14px rgba(0,0,0,.12);display:grid;gap:4px;min-width:250px}
 .tip[hidden]{display:none}
 .tip-date{font-weight:600;color:var(--ink);margin-bottom:2px}
@@ -24,6 +31,7 @@ __CSS__
   <nav class="subnav" aria-label="Strategy lab pages">
     <a href="/" aria-current="page">Overview</a>
     <a href="/momentum/">Momentum (M1)</a>
+    <a href="/m1-exposure/">M1 Exposure</a>
     <a href="/carry/">Carry</a>
     <a href="/seesaw/">Seesaw</a>
     <a href="/controls/">Controls</a>
@@ -44,17 +52,20 @@ __CSS__
   const today = new Date().toISOString().slice(0, 10);
   const START = D.start;
   const STYLE = {momentum: ['var(--accent)', ''], carry: ['var(--c5)', ''], seesaw: ['var(--c6)', ''],
-                 basket: ['var(--muted)', '6 4'], longonly: ['var(--warn)', ''], btc: ['var(--btc)', '']};
+                 basket: ['var(--muted)', '6 4'], longonly: ['var(--warn)', ''], btc: ['var(--btc)', ''],
+                 m1_full: ['var(--accent)', '6 4'], m1_half: ['var(--c5)', '3 4'], m1_volatility: ['var(--pass)', '']};
 
   // legend key: a short line drawn exactly like the chart's line (colour, width, dashes)
   const key = (color, w, dash) => `<svg class="key" width="26" height="10" aria-hidden="true"><line x1="1" y1="5" x2="25" y2="5" stroke="${color}" stroke-width="${w}" ${dash ? `stroke-dasharray="${dash}"` : ''} stroke-linecap="round"/></svg>`;
   let G = null;   // chart geometry, kept for the hover crosshair
-  function chart(){
-    const n = new Set(D.board.flatMap(s => s.equity.map(p => p.d)).filter(d => d > START)).size;
-    if (n < 2) return `<p class="empty">The comparison chart starts after the second daily close. The scoreboard above updates every day.</p>`;
-    // align every strategy by date; later starters (the forward tests) begin at their own start date
-    const dates = [START, ...[...new Set(D.board.flatMap(s => s.equity.map(p => p.d)))].filter(d => d > START).sort()];
-    const series = D.board.map(s => { const m = Object.fromEntries(s.equity.map(p => [p.d, p.e])), st = s.start || START;
+  function chart(selected){
+    G = null;
+    if (!selected.length) return '<p class="empty">Select an account to show its history.</p>';
+    const available = selected.filter(s => s.equity.length);
+    if (!available.length) return '<p class="empty">The selected accounts are waiting for their first daily close.</p>';
+    const dates = [...new Set(available.flatMap(s => [s.start || START, ...s.equity.map(p => p.d)]))].sort();
+    const n = dates.length - 1;
+    const series = available.map(s => { const m = Object.fromEntries(s.equity.map(p => [p.d, p.e])), st = s.start || START;
       return {...s, pts: dates.map(d => d === st ? D.bankroll : (d > st && m[d] != null ? m[d] : null))}; });
     const W = 800, H = 260, pl = 60, pr = 12, pt = 12, pb = 28;
     const vals = series.flatMap(s => s.pts.filter(v => v != null));
@@ -64,12 +75,12 @@ __CSS__
     const y = v => pt + (hi - v) * (H - pt - pb) / (hi - lo);
     const ticks = [lo + pad, (lo + hi) / 2, hi - pad];
     G = {series, n, x, y, W, H, pl, pr, pt, pb, dates};
-    return `<svg id="ovChart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Paper account values of every strategy since ${fmtDate(START)}. Hover or tap for values on a given day.">
+    return `<svg id="ovChart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Paper account values for the selected strategies. Hover or tap for values on a given day.">
       ${ticks.map(t => `<line x1="${pl}" x2="${W - pr}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)" opacity=".7"/>
         <text x="${pl - 8}" y="${y(t) + 4}" text-anchor="end" font-size="11" fill="var(--muted)" font-family="var(--mono)">${usd0(t)}</text>`).join('')}
       <line x1="${pl}" x2="${W - pr}" y1="${y(D.bankroll)}" y2="${y(D.bankroll)}" stroke="var(--muted)" stroke-dasharray="3 4" opacity=".6"/>
       ${series.map(s => `<polyline points="${s.pts.map((v, i) => v == null ? '' : `${x(i).toFixed(1)},${y(v).toFixed(1)}`).filter(Boolean).join(' ')}" fill="none" stroke="${STYLE[s.id][0]}" stroke-width="${s.id === 'momentum' ? 2.5 : 1.8}" ${STYLE[s.id][1] ? `stroke-dasharray="${STYLE[s.id][1]}"` : ''}/>`).join('')}
-      <text x="${pl}" y="${H - 8}" font-size="11" fill="var(--muted)">${fmtDate(START)}</text>
+      <text x="${pl}" y="${H - 8}" font-size="11" fill="var(--muted)">${fmtDate(dates[0])}</text>
       <text x="${W - pr}" y="${H - 8}" font-size="11" fill="var(--muted)" text-anchor="end">${fmtDate(G.dates[G.dates.length - 1])}</text>
       <g id="ovHover" visibility="hidden">
         <line id="ovGuide" y1="${pt}" y2="${H - pb}" stroke="var(--muted)" stroke-width="1" stroke-dasharray="2 3"/>
@@ -130,7 +141,7 @@ __CSS__
   }
   function metrics(s) {
     return `<td class="num ${cls(s.ret)}">${s.equity.length ? pct(s.ret, 2) : '—'}
-      <span class="what">Since ${fmtDate(s.start || START)}</span></td>
+      <span class="what">${s.equity.length ? 'Since' : s.start > today ? 'Scheduled' : 'Starts'} ${fmtDate(s.start || START)}</span></td>
       <td class="num">${s.equity.length ? pct(s.worst, 1) : '—'}</td>`;
   }
   const candidates = D.board.filter(s => s.kind === 'candidate');
@@ -149,10 +160,14 @@ __CSS__
     </tbody></table></div>
     <p class="normal">Provisional results omit funding for missing contract-days. Equity updates when those funding records arrive.</p>
   </section>
-  <section class="panel" aria-label="Daily account history">
+  <section class="panel" id="comparison" aria-label="Daily account history">
     <h2>Daily account history</h2>
-    <div class="chart">${chart()}</div>
-    <div class="legend">${D.board.map(s => `<span>${key(STYLE[s.id][0], s.id === 'momentum' ? 2.5 : 1.8, STYLE[s.id][1])}${esc(s.name)}</span>`).join('')}</div>
+    <fieldset class="chart-picker">
+      <legend>Compare accounts</legend>
+      <div class="chart-actions"><button type="button" id="chartAll">Select all</button><button type="button" id="chartClear">Clear selection</button></div>
+      <div class="legend">${D.board.map(s => `<label><input type="checkbox" value="${s.id}" checked>${key(STYLE[s.id][0], s.id === 'momentum' ? 2.5 : 1.8, STYLE[s.id][1])}${esc(s.name)}</label>`).join('')}</div>
+    </fieldset>
+    <div class="chart" id="chartView" aria-live="polite"></div>
   </section>
   <section class="panel" aria-label="Comparison accounts">
     <h2>Comparison accounts</h2>
@@ -164,6 +179,19 @@ __CSS__
     <div>Paper results use Binance archive data. <a href="${D.repo}/tree/main/lab">Browse the lab code, positions, and proof files.</a></div>
     <div><a href="${D.repo}/blob/main/lab/forward_protocol.md">Read the carry and Seesaw protocol.</a></div>
   </footer>`;
-  attachHover();
+  const options = [...document.querySelectorAll('.chart-picker input[type="checkbox"]')];
+  function drawComparison(){
+    const selected = new Set(options.filter(option => option.checked).map(option => option.value));
+    document.getElementById('chartView').innerHTML = chart(D.board.filter(s => selected.has(s.id)));
+    attachHover();
+  }
+  function selectAccounts(checked){
+    options.forEach(option => { option.checked = checked; });
+    drawComparison();
+  }
+  options.forEach(option => option.addEventListener('change', drawComparison));
+  document.getElementById('chartAll').addEventListener('click', () => selectAccounts(true));
+  document.getElementById('chartClear').addEventListener('click', () => selectAccounts(false));
+  drawComparison();
 })();
 </script>

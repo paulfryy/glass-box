@@ -5,6 +5,7 @@ Public forward tests of fixed trading rules, each with a $5,000 paper account. T
 | Page | Experiment | Published positions |
 |---|---|---|
 | `/momentum/` | M1 weekly long/short memecoin momentum, started September 28, 2026 | `lab/positions.csv` |
+| `/m1-exposure/` | M1 full exposure, half exposure, and a weekly volatility cap planned for November 23, 2026 | `lab/m1-exposure/scales.csv` after the first rebalance |
 | `/carry/` | BTC and ETH spot/perpetual cash-and-carry, started October 5, 2026 | `lab/carry/positions.csv` |
 | `/seesaw/` | S1-smooth72, started October 5, 2026 | `lab/seesaw/positions/` |
 | `/controls/` | Equal-weight memecoins and long-only momentum | `lab/controls/` |
@@ -21,7 +22,7 @@ python lab/render.py
 python -m http.server 8000 --directory public
 ```
 
-`verify.py` recomputes all five accounts in a temporary copy and checks that saved results and position records replay. Pass `--base <git-revision>` after a refresh to check that older published positions were preserved.
+`verify.py` recomputes the active paper accounts in a temporary copy and checks that saved results and position records replay. Pass `--base <git-revision>` after a refresh to check that older published positions were preserved. See the [M1 exposure protocol](lab/m1_exposure_protocol.md) for the comparison and publication rules.
 
 ## Updates and publication
 

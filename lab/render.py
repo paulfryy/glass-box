@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Render the Strategy Lab and its legacy redirects from the saved lab files.
-Uses the standard library and runs without network access.
+Runs without network access.
 
 Usage: python lab/render.py
 """
@@ -12,6 +12,9 @@ import json
 import os
 from collections import defaultdict
 from datetime import date, timedelta
+from statistics import mean, stdev
+
+import m1_exposure as exposure
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -31,6 +34,7 @@ CONTROLS = [
 
 NAV = [{"id": "overview", "label": "Overview", "href": "/"},
        {"id": "momentum", "label": "Momentum (M1)", "href": "/momentum/"},
+       {"id": "m1-exposure", "label": "M1 Exposure", "href": "/m1-exposure/"},
        {"id": "carry", "label": "Carry", "href": "/carry/"},
        {"id": "seesaw", "label": "Seesaw", "href": "/seesaw/"},
        {"id": "controls", "label": "Controls", "href": "/controls/"}]
@@ -140,6 +144,30 @@ def summary(points):
     return {"value": v, "ret": v / BANKROLL - 1, "worst": dd}
 
 
+def exposure_comparison():
+    log = rows(exposure.LOG)
+    start = log[0]["week"] if log else exposure.START
+    labels = (
+        ("M1 full exposure", "M1 at its original sizing, starting with the exposure comparisons."),
+        ("M1 half exposure", "Always holds 50% of M1’s position weights during an active week."),
+        ("M1 volatility cap", "Cuts position weights when trailing M1 volatility exceeds 20% annualized."),
+    )
+    accounts = []
+    for name, (label, description) in zip(exposure.ACCOUNTS, labels):
+        folder = f"{exposure.FOLDER}/{name}"
+        equity = rows(f"{folder}/equity.csv")
+        points = equity_points(equity)
+        daily = [float(r["net"]) for r in equity]
+        volatility = stdev(daily) if len(daily) > 1 else 0
+        sharpe = mean(daily) / volatility * 365**0.5 if volatility and len(daily) >= 28 else None
+        accounts.append({"id": name, "name": label, "what": description, "kind": "control", "start": start,
+                         "href": "/m1-exposure/", "equity": points, "status": status(f"{folder}/status.txt"),
+                         "sharpe": sharpe, **summary(points)})
+    write("exposure.html", {"accounts": accounts, "start": start, "schedule": exposure.START, "bankroll": BANKROLL,
+                            "scales": log[::-1], "nav": NAV, "repo": REPO}, exposure.FOLDER)
+    return accounts
+
+
 def write(template, data, *out, title=None):
     css = open(os.path.join(HERE, "common.css"), encoding="utf-8").read()
     tpl = open(os.path.join(HERE, template), encoding="utf-8").read().replace("__CSS__", css)
@@ -206,6 +234,7 @@ def main():
               "bar": "Positive net return at week 26", **summary(m1_points)}]
     board += [{"id": c["id"], "name": c["name"], "kind": "control", "href": "/controls/", "what": c["what"],
                "equity": c["equity"], "status": st, **summary(c["equity"])} for c in controls]
+    board += exposure_comparison()
     board.append({"id": "btc", "name": "Hold BTC", "kind": "benchmark", "href": None,
                   "what": "Reference return using BTC perpetual closes.", "equity": btc, "status": st, **summary(btc)})
     # ---- forward tests (started 2026-10-05; lab/forward_protocol.md)

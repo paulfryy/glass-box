@@ -1,0 +1,43 @@
+<title>M1 Exposure · Strategy Lab</title>
+<meta name="description" content="Three paper accounts with the same M1 picks and different position sizes.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+__CSS__
+.exposure-table td{vertical-align:top}
+.exposure-table .muted{display:block;font-size:.875rem;margin-top:2px}
+</style>
+<div class="wrap" style="padding-block:18px 0"><nav class="subnav" id="subnav" aria-label="Strategy lab pages"></nav></div>
+<main class="wrap" id="lab"></main>
+<script id="data" type="application/json">__DATA__</script>
+<script>
+(() => {
+  const D = JSON.parse(document.getElementById('data').textContent);
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const date = value => new Intl.DateTimeFormat('en-US', {dateStyle:'medium', timeZone:'UTC'}).format(new Date(value + 'T00:00:00Z'));
+  const pct = value => (Number(value) * 100).toFixed(2) + '%';
+  const usd = value => value.toLocaleString('en-US', {style:'currency', currency:'USD'});
+  document.getElementById('subnav').innerHTML = D.nav.map(n => `<a href="${n.href}"${n.id === 'm1-exposure' ? ' aria-current="page"' : ''}>${esc(n.label)}</a>`).join('');
+  document.getElementById('lab').innerHTML = `
+    <section class="intro">
+      <h1>M1 exposure experiment</h1>
+      <p>Does cutting exposure when M1 gets volatile improve results after costs? Three ${usd(D.bankroll)} paper accounts use the same M1 picks and start together.</p>
+      <p class="muted">${D.scales.length ? `Started at the ${date(D.start)} close.` : `Scheduled to start at the ${date(D.schedule)} close. Results appear after the first completed holding day.`}</p>
+    </section>
+    <section class="panel" aria-label="Paper account results">
+      <h2>Paper account results</h2>
+      <div class="tbl"><table class="exposure-table"><thead><tr><th scope="col">Account</th><th scope="col" class="r">Value</th><th scope="col" class="r">Net return</th><th scope="col" class="r">Max drawdown</th><th scope="col" class="r">Sharpe</th></tr></thead><tbody>
+      ${D.accounts.map(a => `<tr><td><b>${esc(a.name)}</b><span class="muted">${esc(a.what)}</span>${Number(a.status.funding_missing_contract_days) > 0 ? '<span class="muted">Provisional funding</span>' : ''}</td>
+        <td class="num">${a.equity.length ? usd(a.value) : '—'}</td><td class="num">${a.equity.length ? pct(a.ret) : '—'}</td>
+        <td class="num">${a.equity.length ? pct(a.worst) : '—'}</td><td class="num">${a.sharpe == null ? '—' : a.sharpe.toFixed(2)}</td></tr>`).join('')}
+      </tbody></table></div>
+      <p class="normal">Sharpe is annualized from daily net returns and appears after 28 closes. <a href="/#comparison">Compare the account histories</a>.</p>
+    </section>
+    <section class="panel" aria-label="Published weekly decisions">
+      <h2>Published weekly decisions</h2>
+      ${D.scales.length ? `<div class="tbl"><table><thead><tr><th scope="col">Week of</th><th scope="col" class="r">Trailing volatility</th><th scope="col" class="r">M1 weight held</th><th scope="col">Published UTC</th></tr></thead><tbody>
+        ${D.scales.map(row => `<tr><td>${date(row.week)}</td><td class="num">${row.annualized_volatility === '' ? 'Unavailable' : pct(row.annualized_volatility)}</td><td class="num">${pct(row.scale)}</td><td>${esc(row.published_utc)}</td></tr>`).join('')}
+        </tbody></table></div><p><a href="${D.repo}/blob/main/lab/m1-exposure/scales.csv">Weekly decision log</a></p>` : '<p>Weekly decisions will appear here after the first rebalance.</p>'}
+      <p><a href="${D.repo}/blob/main/lab/m1_exposure_protocol.md">Read the experiment protocol</a></p>
+    </section>`;
+})();
+</script>

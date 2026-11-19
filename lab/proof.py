@@ -29,6 +29,8 @@ from opentimestamps.core.op import OpAppend, OpSHA256
 from opentimestamps.core.serialize import StreamDeserializationContext, StreamSerializationContext
 from opentimestamps.core.timestamp import DetachedTimestampFile
 
+import m1_exposure as exposure
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 PROOFS = os.path.join(HERE, "proofs")
 CALENDARS = ["https://a.pool.opentimestamps.org", "https://b.pool.opentimestamps.org",
@@ -122,6 +124,8 @@ def bitcoin_block(ft):
 
 def main():
     stamp_set(PROOFS, week_files())                                                    # M1, weekly
+    exposure_proofs = os.path.join(PROOFS, exposure.FOLDER)
+    stamp_set(exposure_proofs, week_files(os.path.join(HERE, exposure.LOG), exposure_proofs))
     stamp_set(os.path.join(PROOFS, "carry"),                                           # F1 carry, weekly
               week_files(os.path.join(HERE, "carry", "positions.csv"), os.path.join(PROOFS, "carry")))
     stamp_set(os.path.join(PROOFS, "seesaw"),                                          # F2 seesaw, daily

@@ -9,11 +9,12 @@ from tempfile import TemporaryDirectory
 
 import pandas as pd
 
+import m1_exposure as exposure
 
 LAB = Path(__file__).resolve().parent
 SCRIPTS = ("m1", "carry", "seesaw")
 WEEKLY_POSITIONS = ("positions.csv", "carry/positions.csv", "controls/basket/positions.csv",
-                    "controls/longonly/positions.csv")
+                    "controls/longonly/positions.csv", exposure.LOG)
 EQUITY = ("equity.csv", "carry/equity.csv", "seesaw/equity.csv", "controls/basket/equity.csv",
           "controls/longonly/equity.csv")
 
@@ -39,7 +40,10 @@ def check_history(base, current):
 
 
 def check_equity(replayed):
-    for name in EQUITY:
+    files = list(EQUITY)
+    if (LAB / exposure.LOG).exists():
+        files.extend(f"{exposure.FOLDER}/{name}/equity.csv" for name in exposure.ACCOUNTS)
+    for name in files:
         actual = pd.read_csv(replayed / name).set_index("date")
         expected = pd.read_csv(LAB / name).set_index("date")
         for fields, tolerance in ((["gross", "funding", "cost", "net"], 0.00000101),
@@ -49,6 +53,7 @@ def check_equity(replayed):
                                               rtol=0, atol=tolerance)
             except AssertionError as exc:
                 raise ValueError(f"Paper equity did not replay from saved inputs in {name}") from exc
+    return len(files)
 
 
 def main():
@@ -65,8 +70,8 @@ def main():
             subprocess.run([sys.executable, replayed / f"{name}.py", "--offline"], check=True)
         if position_files(replayed) != published:
             raise ValueError("Offline replay changed the published position record")
-        check_equity(replayed)
-    print("Verified five paper accounts and preserved the published position records.")
+        count = check_equity(replayed)
+    print(f"Verified {count} paper accounts and preserved the published position records.")
 
 
 if __name__ == "__main__":

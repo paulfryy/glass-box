@@ -26,11 +26,13 @@ import sys
 import time
 import zipfile
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import requests
 import funding
+import m1_exposure as exposure
 import yaml
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -338,9 +340,9 @@ def append_positions(path, rows):
     pd.DataFrame(rows).to_csv(path, mode="a", header=not exists, index=False, lineterminator="\n")
 
 
-def account(W, C, F, btc, path, **costs):
-    """Paper account since START (row t = return from close t to close t+1; the newest row has none yet)."""
-    r = run(W[W.index >= START], C[C.index >= START], F[F.index >= START], **costs).iloc[:-1]
+def account(W, C, F, btc, path, start=START, **costs):
+    """Paper account since start (row t = return from close t to close t+1)."""
+    r = run(W[W.index >= start], C[C.index >= start], F[F.index >= start], **costs).iloc[:-1]
     b = btc.pct_change(fill_method=None).shift(-1).reindex(r.index).fillna(0.0)
     eq = pd.DataFrame({"date": [f"{d + pd.Timedelta(days=1):%Y-%m-%d}" for d in r.index],   # value AT that close
                        "gross": r["gross"].round(6), "funding": r["funding"].round(6), "cost": r["cost"].round(6),
@@ -355,6 +357,33 @@ def read_status(path):
         return {}
     with open(path, encoding="utf-8") as f:
         return dict(line.strip().split("=", 1) for line in f if "=" in line)
+
+
+def run_exposure_comparisons(book, closes, rates, btc, base_equity, now, offline):
+    root = Path(HERE)
+    path = root / exposure.LOG
+    scales = (pd.read_csv(path, float_precision="round_trip") if path.exists()
+              else pd.DataFrame(columns=["week", "annualized_volatility", "scale", "published_utc"]))
+    if not offline:
+        weeks = pd.read_csv(root / "positions.csv")["week"].unique()
+        gross = base_equity.set_index(pd.to_datetime(base_equity["date"], utc=True))["gross"]
+        additions = exposure.weekly_scales(weeks, closes.index, scales, gross, now)
+        if additions:
+            path.parent.mkdir(exist_ok=True)
+            append_positions(path, additions)
+            scales = pd.read_csv(path, float_precision="round_trip")
+    if scales.empty:
+        return
+
+    first = pd.Timestamp(scales["week"].min(), tz="UTC")
+    for name, scale in exposure.exposure_by_date(book.index, scales).items():
+        out = path.parent / name
+        out.mkdir(exist_ok=True)
+        weights = book.mul(scale, axis=0)
+        account(weights, closes, rates, btc, out / "equity.csv", start=first)
+        held = weights.shift(1).loc[weights.index > first]
+        status = {"data_through": f"{closes.index.max():%Y-%m-%d}", **funding.coverage(held, rates)}
+        (out / "status.txt").write_text("".join(f"{key}={value}\n" for key, value in status.items()), encoding="utf-8", newline="\n")
 
 
 # ---------------------------------------------------------------- main
@@ -378,11 +407,13 @@ def main():
     E = live_eligible(C, V)
     W = weights(C, E)
 
-    stamp = pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%d %H:%M")
+    now = pd.Timestamp.now(tz="UTC")
+    stamp = now.strftime("%Y-%m-%d %H:%M")
     # 1. M1 (the candidate): positions + paper account
     publish(W, C, os.path.join(HERE, "positions.csv"), stamp)
     W = honor_published(W, C.notna() & C.shift(-1).notna(), os.path.join(HERE, "positions.csv"), "M1")
     eq = account(W, C, F, btc, os.path.join(HERE, "equity.csv"))
+    run_exposure_comparisons(W, C, F, btc, eq, now, a.offline)
     held = W.shift(1).loc[W.index > START]
     # 2. controls: same data and start date, spot costs, no funding
     for cid, (fn, fee, slip, fund) in CONTROLS.items():
