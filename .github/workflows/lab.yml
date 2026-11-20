@@ -1,0 +1,14 @@
+name: Dispatch Strategy Lab update
+# The deployed glassbox-api Worker calls this filename at 09:20 and 21:20 UTC.
+on: workflow_dispatch
+
+permissions: {}
+
+jobs:
+  update:
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/strategy-lab.yml
+    permissions:
+      contents: write
+      pages: write
+      id-token: write

@@ -91,7 +91,8 @@ def local_time(stamp):
 def summary(root):
     records = [json.loads(path.read_text(encoding="utf-8")) for path in sorted((root / "days").glob("*.json"))]
     lines = ["# Binance archive timing", "", f"UTC candle days **{FIRST} through {LAST}**.", "",
-             "Checks run every 15 minutes from 6:07 a.m. to 4:52 p.m. UTC, with a catch-up check at 10:07 p.m. UTC. "
+             "The Cloudflare timer dispatches checks every 10 minutes from 6 a.m. through 4:50 p.m. UTC, "
+             "with catch-up checks in the 10 p.m. UTC hour. "
              "Each day tracks contracts with a price on the latest saved M1 close preceding it.", "",
              "Times below are Eastern. First seen means the first successful poll. The server timestamp is "
              "`Last-Modified`, which can also reflect a later correction.", "",

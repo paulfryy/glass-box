@@ -1,0 +1,30 @@
+name: Dispatch M1 archive monitor
+# The deployed glassbox-api Worker calls this compatibility entry point every ten minutes.
+on: workflow_dispatch
+
+permissions: {}
+
+jobs:
+  window:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      due: ${{ steps.window.outputs.due }}
+    steps:
+      - id: window
+        run: |
+          day=$(date -u +%F)
+          hour=$(date -u +%-H)
+          if [[ "$day" < 2026-11-20 || "$day" > 2026-12-03 ]]; then exit 0; fi
+          if (( (hour >= 6 && hour < 17) || hour == 22 )); then
+            echo 'due=true' >> "$GITHUB_OUTPUT"
+          fi
+
+  observe:
+    needs: window
+    if: needs.window.outputs.due == 'true'
+    uses: ./.github/workflows/archive-timing.yml
+    permissions:
+      contents: write
+      actions: write
