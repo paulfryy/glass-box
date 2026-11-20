@@ -75,6 +75,9 @@ def observe(directory, closes, day, now):
         observations = list(pool.map(lambda symbol: probe(day, symbol), pending))
     record["last_poll_utc"] = now.isoformat(timespec="seconds")
     record["errors"] = {symbol: error for symbol, _, error in observations if error}
+    record["saw_missing"] = record.get("saw_missing", False) or any(
+        file is None and error is None for _, file, error in observations
+    )
     record["files"].update({symbol: file for symbol, file, _ in observations if file})
     directory.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -95,25 +98,37 @@ def summary(root):
              "| Candle day (UTC) | Seen | First file seen | Full set seen | Latest server timestamp |",
              "|---|---:|---|---|---|"]
     lags, mondays = [], []
+    complete_days = already_present = 0
     for r in records:
         day = date.fromisoformat(r["candle_day"])
         files = r["files"].values()
         observed = [datetime.fromisoformat(f["first_seen_utc"]) for f in files]
         modified = [datetime.fromisoformat(f["last_modified_utc"]) for f in files if f["last_modified_utc"]]
         complete = len(observed) == len(r["required"])
+        ready = "—"
         if complete:
+            complete_days += 1
+            ready = local_time(max(observed))
+        if complete and r.get("saw_missing", False):
             close = datetime.combine(day + timedelta(days=1), time(), UTC)
             lag = (max(observed) - close).total_seconds() / 3600
             lags.append(lag)
             if day.weekday() == 0:
                 mondays.append(lag)
+        elif complete:
+            already_present += 1
+            ready += " (already visible)"
         lines.append(f"| {day} | {len(observed)}/{len(r['required'])} | "
                      f"{local_time(min(observed)) if observed else '—'} | "
-                     f"{local_time(max(observed)) if complete else '—'} | "
+                     f"{ready} | "
                      f"{local_time(max(modified)) if modified else '—'} |")
-    lines += ["", f"**{len(lags)} of {(LAST - FIRST).days + 1}** days have a complete observed set."]
+    lines += ["", f"**{complete_days} of {(LAST - FIRST).days + 1}** days have a complete observed set."]
+    if already_present:
+        lines += [f"{already_present} set(s) were already visible when checked. They provide upper bounds and are "
+                  "excluded from the timing median."]
     if lags:
-        lines += [f"Full sets were observed a median of **{median(lags):.1f} hours** after close "
+        lines += [f"For {len(lags)} day(s) observed going from incomplete to complete, the median was "
+                  f"**{median(lags):.1f} hours** after close "
                   f"(range {min(lags):.1f}–{max(lags):.1f} hours)."]
     if mondays:
         lines += [f"For the {len(mondays)} observed Monday candle day(s), the median was **{median(mondays):.1f} hours**."]
