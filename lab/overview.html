@@ -149,6 +149,13 @@ __CSS__
   const candidates = D.board.filter(s => s.kind === 'candidate');
   const comparisons = D.board.filter(s => s.kind !== 'candidate');
   const groups = {paper: D.board, replay: D.replay};
+  function accountChoices(group, accounts){
+    const cutoff = 0.75 * Math.max(...accounts.filter(s => s.equity.length).map(s => s.value));
+    return `<div class="legend" data-chart-group="${group}">${accounts.map(s => {
+      const checked = s.equity.length && s.value >= cutoff ? ' checked' : '';
+      return `<label><input type="checkbox" value="${s.id}"${checked}>${key(STYLE[s.id][0], s.id === 'momentum' ? 2.5 : 1.8, STYLE[s.id][1])}${esc(s.name)}</label>`;
+    }).join('')}</div>`;
+  }
   let mode = new URLSearchParams(window.location.search).get('comparison') === 'replay' ? 'replay' : 'paper';
   document.getElementById('lab').innerHTML = `
   <section class="intro">
@@ -176,8 +183,9 @@ __CSS__
     <p class="normal" id="replayNote" hidden>Retrospective simulation on published M1 positions. <a href="/m1-exposure/#replay">See replay returns and drawdowns</a>.</p>
     <fieldset class="chart-picker">
       <legend>Compare accounts</legend>
+      <p class="normal">The chart starts with accounts within 25% of the highest balance in this view.</p>
       <div class="chart-actions"><button type="button" id="chartAll">Select all</button><button type="button" id="chartClear">Clear selection</button></div>
-      ${Object.entries(groups).map(([group, accounts]) => `<div class="legend" data-chart-group="${group}">${accounts.map(s => `<label><input type="checkbox" value="${s.id}" checked>${key(STYLE[s.id][0], s.id === 'momentum' ? 2.5 : 1.8, STYLE[s.id][1])}${esc(s.name)}</label>`).join('')}</div>`).join('')}
+      ${Object.entries(groups).map(([group, accounts]) => accountChoices(group, accounts)).join('')}
     </fieldset>
     <div class="chart" id="chartView" aria-live="polite"></div>
   </section>
