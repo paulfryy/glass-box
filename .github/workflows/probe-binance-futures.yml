@@ -1,0 +1,43 @@
+name: Probe Binance futures candles
+on:
+  push:
+    branches: [m1-candle-connectivity-20261120]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - run: pip install -r lab/requirements.txt
+      - name: Probe archive and direct API for the same completed candle
+        run: |
+          PYTHONPATH=lab python - <<'PY'
+          import math
+          import pandas as pd
+          import binance_candles
+          import m1
+
+          symbol = "PNUTUSDT"
+          day = pd.Timestamp("2026-11-16", tz="UTC")
+          archived = m1.fetch_day(symbol, day)
+          if archived is None:
+              raise SystemExit("Binance archive returned no candle")
+          print(f"Archive {symbol}: close={archived[0]}, USDT volume={archived[1]}", flush=True)
+          try:
+              direct = binance_candles.daily_candle(symbol, day)
+          except binance_candles.FeedUnavailable as exc:
+              raise SystemExit(f"Direct Binance futures API unavailable: {exc}") from None
+          if direct is None:
+              raise SystemExit("Direct Binance futures API returned no candle")
+          print(f"Direct {symbol}: close={direct[0]}, USDT volume={direct[1]}", flush=True)
+          if not all(math.isclose(api, saved, rel_tol=1e-10) for api, saved in zip(direct, archived)):
+              raise SystemExit("Direct candle does not match the archive")
+          print("The direct API is reachable and the candle matches the archive.")
+          PY
