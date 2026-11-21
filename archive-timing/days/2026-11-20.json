@@ -146,6 +146,10 @@
       "first_seen_utc": "2026-11-21T08:20:48+00:00",
       "last_modified_utc": "2026-11-21T08:19:14+00:00"
     },
+    "SLERFUSDT": {
+      "first_seen_utc": "2026-11-21T08:30:47+00:00",
+      "last_modified_utc": "2026-11-21T08:22:12+00:00"
+    },
     "SPXUSDT": {
       "first_seen_utc": "2026-11-21T08:20:48+00:00",
       "last_modified_utc": "2026-11-21T08:19:21+00:00"
@@ -159,7 +163,7 @@
       "last_modified_utc": "2026-11-21T08:19:26+00:00"
     }
   },
-  "last_poll_utc": "2026-11-21T08:20:47+00:00",
+  "last_poll_utc": "2026-11-21T08:30:47+00:00",
   "reference_day": "2026-11-19",
   "required": [
     "1000000MOGUSDT",

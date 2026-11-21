@@ -9,7 +9,7 @@ Times below are Eastern. First seen means the first successful poll. The server 
 | Candle day (UTC) | Seen | First file seen | Full set seen | Latest server timestamp |
 |---|---:|---|---|---|
 | 2026-11-19 | 54/54 | Nov 20, 7:10 AM | Nov 20, 7:10 AM (already visible) | Nov 20, 3:30 AM |
-| 2026-11-20 | 39/54 | Nov 21, 3:20 AM | — | Nov 21, 3:20 AM |
+| 2026-11-20 | 40/54 | Nov 21, 3:20 AM | — | Nov 21, 3:22 AM |
 
 **1 of 14** days have a complete observed set.
 1 set(s) were already visible when checked. They provide upper bounds and are excluded from the timing median.
