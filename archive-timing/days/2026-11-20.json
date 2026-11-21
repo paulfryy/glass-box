@@ -198,16 +198,28 @@
       "first_seen_utc": "2026-11-21T08:40:51+00:00",
       "last_modified_utc": "2026-11-21T08:40:38+00:00"
     },
+    "VINEUSDT": {
+      "first_seen_utc": "2026-11-21T09:40:49+00:00",
+      "last_modified_utc": "2026-11-21T09:35:04+00:00"
+    },
     "WENUSDT": {
       "first_seen_utc": "2026-11-21T09:10:47+00:00",
       "last_modified_utc": "2026-11-21T09:08:27+00:00"
     },
+    "WIFUSDT": {
+      "first_seen_utc": "2026-11-21T09:40:49+00:00",
+      "last_modified_utc": "2026-11-21T09:35:07+00:00"
+    },
     "WLFIUSDT": {
       "first_seen_utc": "2026-11-21T08:20:49+00:00",
       "last_modified_utc": "2026-11-21T08:19:26+00:00"
+    },
+    "ZEREBROUSDT": {
+      "first_seen_utc": "2026-11-21T09:40:49+00:00",
+      "last_modified_utc": "2026-11-21T09:35:11+00:00"
     }
   },
-  "last_poll_utc": "2026-11-21T09:30:47+00:00",
+  "last_poll_utc": "2026-11-21T09:40:49+00:00",
   "reference_day": "2026-11-19",
   "required": [
     "1000000MOGUSDT",
