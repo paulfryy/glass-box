@@ -150,6 +150,10 @@
       "first_seen_utc": "2026-11-21T08:20:48+00:00",
       "last_modified_utc": "2026-11-21T08:19:11+00:00"
     },
+    "PIPPINUSDT": {
+      "first_seen_utc": "2026-11-21T09:10:47+00:00",
+      "last_modified_utc": "2026-11-21T09:10:42+00:00"
+    },
     "PNUTUSDT": {
       "first_seen_utc": "2026-11-21T08:20:48+00:00",
       "last_modified_utc": "2026-11-21T08:19:12+00:00"
@@ -194,12 +198,16 @@
       "first_seen_utc": "2026-11-21T08:40:51+00:00",
       "last_modified_utc": "2026-11-21T08:40:38+00:00"
     },
+    "WENUSDT": {
+      "first_seen_utc": "2026-11-21T09:10:47+00:00",
+      "last_modified_utc": "2026-11-21T09:08:27+00:00"
+    },
     "WLFIUSDT": {
       "first_seen_utc": "2026-11-21T08:20:49+00:00",
       "last_modified_utc": "2026-11-21T08:19:26+00:00"
     }
   },
-  "last_poll_utc": "2026-11-21T09:00:55+00:00",
+  "last_poll_utc": "2026-11-21T09:10:47+00:00",
   "reference_day": "2026-11-19",
   "required": [
     "1000000MOGUSDT",
