@@ -154,6 +154,10 @@
       "first_seen_utc": "2026-11-22T07:50:50+00:00",
       "last_modified_utc": "2026-11-22T07:49:41+00:00"
     },
+    "PNUTUSDT": {
+      "first_seen_utc": "2026-11-22T08:00:50+00:00",
+      "last_modified_utc": "2026-11-22T07:55:24+00:00"
+    },
     "PONKEUSDT": {
       "first_seen_utc": "2026-11-22T07:50:50+00:00",
       "last_modified_utc": "2026-11-22T07:49:42+00:00"
@@ -195,7 +199,7 @@
       "last_modified_utc": "2026-11-22T07:50:01+00:00"
     }
   },
-  "last_poll_utc": "2026-11-22T07:50:48+00:00",
+  "last_poll_utc": "2026-11-22T08:00:50+00:00",
   "reference_day": "2026-11-20",
   "required": [
     "1000000MOGUSDT",
