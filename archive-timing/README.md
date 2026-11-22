@@ -10,6 +10,7 @@ Times below are Eastern. First seen means the first successful poll. The server 
 |---|---:|---|---|---|
 | 2026-11-19 | 54/54 | Nov 20, 7:10 AM | Nov 20, 7:10 AM (already visible) | Nov 20, 3:30 AM |
 | 2026-11-20 | 54/54 | Nov 21, 3:20 AM | Nov 21, 4:40 AM | Nov 21, 4:35 AM |
+| 2026-11-21 | 0/54 | — | — | — |
 
 **2 of 14** days have a complete observed set.
 1 set(s) were already visible when checked. They provide upper bounds and are excluded from the timing median.
