@@ -20,6 +20,7 @@ Usage: python lab/m1.py [--offline]
 
 import argparse
 import io
+import json
 import os
 import re
 import sys
@@ -33,6 +34,7 @@ import pandas as pd
 import requests
 import funding
 import m1_exposure as exposure
+import m1_readiness as readiness
 import yaml
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -317,7 +319,7 @@ def run(W, C, F, fee_bps=FEE_BPS, slip_bps=SLIP_BPS, funding=True):
 
 
 # ---------------------------------------------------------------- outputs
-def publish(W, C, pos_path, stamp):
+def publish(W, C, pos_path, stamp, ready_week=None):
     """Append each new Monday close's positions to pos_path (published rows are never rewritten)."""
     pos = pd.read_csv(pos_path) if os.path.exists(pos_path) else pd.DataFrame(
         columns=["week", "symbol", "side", "weight", "entry_close", "published_utc"])
@@ -325,6 +327,8 @@ def publish(W, C, pos_path, stamp):
     add = []
     for m in W.index[(W.index.dayofweek == 0) & (W.index >= START)]:
         if f"{m:%Y-%m-%d}" in done:
+            continue
+        if m >= readiness.FIRST and m != ready_week:
             continue
         w = W.loc[m][W.loc[m].abs() > 1e-9].sort_values(ascending=False)
         add += [{"week": f"{m:%Y-%m-%d}", "symbol": s, "side": "long" if x > 0 else "short",
@@ -419,20 +423,39 @@ def main():
         C, V, F = load("closes"), load("volumes"), load("funding")
     else:
         C, V, F = refresh(symbols + ["BTCUSDT"])
-    use = pd.Timestamp(old["data_through"], tz="UTC") if a.offline and old.get("data_through") else complete_through(C)
+    now = pd.Timestamp.now(tz="UTC")
+    positions = os.path.join(HERE, "positions.csv")
+    ready_week = None
+    report = None
+    if not a.offline and now >= readiness.FIRST:
+        published = (pd.read_csv(positions, usecols=["week", "symbol"]) if os.path.exists(positions)
+                     else pd.DataFrame(columns=["week", "symbol"]))
+        recent_symbols = published.loc[published["week"] == published["week"].max(), "symbol"]
+        report = readiness.check(C, V, now, set(published["week"]), recent_symbols)
+        if report["state"] == "ready":
+            ready_week = pd.Timestamp(report["week"], tz="UTC")
+    use = pd.Timestamp(old["data_through"], tz="UTC") if a.offline and old.get("data_through") else complete_through(C, now)
     C, V, F = C[C.index <= use], V[V.index <= use], F[F.index <= use]
     btc = C.pop("BTCUSDT")
     V = V.drop(columns=["BTCUSDT"], errors="ignore")
     F = F.drop(columns=["BTCUSDT"], errors="ignore")
     C, V = C[symbols], V[symbols]
     E = live_eligible(C, V)
+    if ready_week is not None and ready_week in C.index:
+        E.loc[ready_week] = live_eligible(C.loc[:ready_week], V.loc[:ready_week]).loc[ready_week]
     W = weights(C, E)
 
-    now = pd.Timestamp.now(tz="UTC")
     stamp = now.strftime("%Y-%m-%d %H:%M")
     # 1. M1 (the candidate): positions + paper account
-    publish(W, C, os.path.join(HERE, "positions.csv"), stamp)
-    W = honor_published(W, C.notna() & C.shift(-1).notna(), os.path.join(HERE, "positions.csv"), "M1")
+    publish(W, C, positions, stamp, ready_week)
+    if report is not None:
+        if ready_week is not None:
+            added = set(pd.read_csv(positions, usecols=["week"])["week"]) if os.path.exists(positions) else set()
+            report["state"] = "published" if report["week"] in added else "waiting_for_positions"
+        Path(HERE, readiness.REPORT).write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+        print(f"M1 rebalance {report['week']}: {report['state']}")
+    W = honor_published(W, C.notna() & C.shift(-1).notna(), positions, "M1")
+    W = readiness.hold_unpublished(W, positions)
     eq = account(W, C, F, btc, os.path.join(HERE, "equity.csv"))
     run_exposure_comparisons(W, C, F, btc, eq, now, a.offline)
     run_exposure_replay(W, C, F, btc)
@@ -440,8 +463,10 @@ def main():
     # 2. controls: same data and start date, spot costs, no funding
     for cid, (fn, fee, slip, fund) in CONTROLS.items():
         Wc = fn(C, E)
-        publish(Wc, C, os.path.join(HERE, "controls", cid, "positions.csv"), stamp)
-        Wc = honor_published(Wc, C.notna() & C.shift(-1).notna(), os.path.join(HERE, "controls", cid, "positions.csv"), cid)
+        ctl_positions = os.path.join(HERE, "controls", cid, "positions.csv")
+        publish(Wc, C, ctl_positions, stamp, ready_week)
+        Wc = honor_published(Wc, C.notna() & C.shift(-1).notna(), ctl_positions, cid)
+        Wc = readiness.hold_unpublished(Wc, ctl_positions)
         ec = account(Wc, C, F, btc, os.path.join(HERE, "controls", cid, "equity.csv"), fee_bps=fee, slip_bps=slip, funding=fund)
         print(f"control {cid}: ${ec['equity'].iloc[-1] if len(ec) else BANKROLL:,.2f}")
     latest = {s: float(C[s].dropna().iloc[-1]) for s in C.columns if C[s].notna().any()}

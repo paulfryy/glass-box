@@ -15,6 +15,8 @@ from datetime import date, timedelta
 from statistics import mean, stdev
 
 import m1_exposure as exposure
+import m1_execution as execution
+import m1_readiness as readiness
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -101,6 +103,30 @@ def rows(name):
 def status(name="status.txt"):
     p = os.path.join(HERE, name)
     return dict(line.strip().split("=", 1) for line in open(p) if "=" in line) if os.path.exists(p) else {}
+
+
+def execution_reviews():
+    root = os.path.join(HERE, execution.FOLDER)
+    publications = os.path.join(root, "publications")
+    reviews = []
+    if not os.path.isdir(publications):
+        return reviews
+    for name in sorted(os.listdir(publications), reverse=True):
+        with open(os.path.join(publications, name), encoding="utf-8") as f:
+            publication = json.load(f)
+        result_path = os.path.join(root, "comparisons", name)
+        if os.path.exists(result_path):
+            with open(result_path, encoding="utf-8") as f:
+                results = json.load(f)
+        else:
+            results = {}
+        matched = [row["delay_cost_usd"] for row in results.values() if row["state"] == "matched"]
+        reviews.append({"week": publication["week"], "commit": publication["commit"],
+                        "public_by_utc": publication["public_by_utc"], "total": len(publication["orders"]),
+                        "matched": len(matched), "waiting": len(publication["orders"]) - len(results)
+                        + sum(row["state"] == "waiting_for_archive" for row in results.values()),
+                        "delay_cost_usd": round(sum(matched), 2), "has_results": bool(results)})
+    return reviews
 
 
 def book_of(pos, latest):
@@ -215,10 +241,13 @@ def main():
               for r in rows(os.path.join("proofs", "index.csv"))]
     band_path = os.path.join(HERE, "band.json")
     band = json.load(open(band_path)) if os.path.exists(band_path) else None
+    readiness_path = os.path.join(HERE, readiness.REPORT)
+    signal = json.load(open(readiness_path, encoding="utf-8")) if os.path.exists(readiness_path) else None
     m1_points = equity_points(eq)
     write("template.html", {
         "status": st, "bankroll": BANKROLL, "weeks": weeks, "book": book, "history": weekly_history(eq),
         "equity": m1_points, "review_weeks": REVIEW_WEEKS, "repo": REPO, "proofs": proofs, "band": band,
+        "readiness": signal, "execution": execution_reviews(),
     }, "momentum")
 
     # ---- controls

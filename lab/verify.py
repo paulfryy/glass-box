@@ -10,6 +10,7 @@ from tempfile import TemporaryDirectory
 import pandas as pd
 
 import m1_exposure as exposure
+import m1_execution as execution
 
 LAB = Path(__file__).resolve().parent
 SCRIPTS = ("m1", "carry", "seesaw")
@@ -22,6 +23,7 @@ EQUITY = ("equity.csv", "carry/equity.csv", "seesaw/equity.csv", "controls/baske
 def position_files(lab):
     paths = [lab / name for name in WEEKLY_POSITIONS]
     paths += sorted((lab / "seesaw/positions").glob("*.csv"))
+    paths += sorted((lab / execution.FOLDER / "publications").glob("*.json"))
     return {p.relative_to(lab).as_posix(): p.read_bytes() for p in paths if p.exists()}
 
 
@@ -31,7 +33,9 @@ def check_history(base, current):
     for name in names:
         relative = name.removeprefix("lab/")
         weekly = relative in WEEKLY_POSITIONS
-        if not weekly and not (relative.startswith("seesaw/positions/") and relative.endswith(".csv")):
+        frozen = (relative.startswith("seesaw/positions/") and relative.endswith(".csv")
+                  or relative.startswith(f"{execution.FOLDER}/publications/") and relative.endswith(".json"))
+        if not weekly and not frozen:
             continue
         previous = subprocess.check_output(["git", "show", f"{base}:{name}"], cwd=repo).splitlines()
         latest = current.get(relative, b"").splitlines()

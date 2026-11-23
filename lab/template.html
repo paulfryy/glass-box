@@ -170,6 +170,14 @@ __CSS__
   const nWeeks = D.weeks.length;
   const cps = D.review_weeks.map(n => ({n, d: addDays(START, 7 * n)}));
   const upd = D.status.updated_utc ? localTime(utcStamp(D.status.updated_utc)) : '–';
+  const signal = D.readiness;
+  const signalStatus = {
+    awaiting_close: 'Waiting for the signal close',
+    waiting_for_candles: 'Waiting for missing candles',
+    waiting_for_positions: 'Waiting for a valid set of positions',
+    skipped: 'Rebalance skipped after the publication window',
+    published: 'Picks published'
+  };
 
   document.getElementById('lab').innerHTML = `
   ${behindDays >= 2 ? `<div class="stale" role="status"><b>Daily data is delayed.</b> Latest close ${fmtDate(D.status.data_through)}.</div>` : ''}
@@ -200,6 +208,11 @@ __CSS__
       <h2>This week's positions${wk ? ' · week of ' + fmtDate(wk) : ''}</h2>
       ${D.book.length ? `<span class="muted" style="font-size:13px">Published ${esc(localTime(utcStamp(D.book[0].published)))} · ${proofBadge(wk)} · <a href="#proof">how to check</a></span>` : ''}
     </div>
+    ${signal ? `<div class="panel" role="status"><b>${fmtDate(signal.week)} rebalance · ${esc(signalStatus[signal.state])}</b>
+      <p>${signal.expected.length} expected futures candles per day, including BTC.
+        ${signal.state.startsWith('waiting') || signal.state === 'skipped' ? 'The paper account carries its preceding book while a new rebalance is unavailable.' : ''}</p>
+      ${signal.state === 'awaiting_close' ? '' : Object.entries(signal.missing).filter(([, symbols]) => symbols.length).map(([day, symbols]) =>
+        `<p class="muted">${fmtDate(day)} missing ${symbols.length === signal.expected.length ? 'the full candle set' : esc(symbols.join(', '))}.</p>`).join('')}</div>` : ''}
     ${D.book.length ? `<div class="movers" id="movers" aria-live="polite">${movers()}</div>` : ''}
     <div class="book">
       <div class="panel"><div class="sidehead"><h3><span class="side long">${term('Long', TIP.long)}</span> · bets these keep rising</h3><span class="sidesum" id="sumLong">${sideSum('long')}</span></div><div id="bookLong">${side('long')}</div></div>
@@ -234,6 +247,18 @@ __CSS__
     </tbody></table></div>` : '<p class="empty">The first week is in progress. Official results appear after each daily close (00:00 UTC).</p>'}
     <p class="muted" style="font-size:13px;margin:0">${term('Funding', TIP.funding)} coverage through ${D.status.funding_through && D.status.funding_through !== '-' ? fmtDate(D.status.funding_through) : 'pending'}.
       ${Number(D.status.funding_missing_contract_days) > 0 ? `Equity is provisional while ${Number(D.status.funding_missing_contract_days)} contract-days are missing.` : ''}</p>
+  </section>
+
+  <section class="panel" id="execution" aria-label="Execution delay">
+    <h2>Execution delay</h2>
+    <p>For each weekly trade, compare the Monday close with the first archived Binance trade within one hour of confirmed GitHub publication. Positive cost means the later price was worse. The estimate uses fixed $5,000 target weights and excludes fees, funding, and market impact.</p>
+    ${D.execution.length ? `<div class="tbl"><table><thead><tr><th>Week of</th><th>Public by</th><th class="r">Orders matched</th><th class="r">Delay cost</th></tr></thead><tbody>
+      ${D.execution.map(review => `<tr><td><a href="${D.repo}/commit/${review.commit}">${fmtDate(review.week)}</a></td>
+        <td>${esc(localTime(Date.parse(review.public_by_utc)))}</td>
+        <td class="num">${review.matched}/${review.total}${review.waiting ? `<div class="muted">${review.waiting} waiting on archive</div>` : ''}</td>
+        <td class="num">${review.matched ? sgn$(review.delay_cost_usd) : '–'}${review.matched && review.matched < review.total ? '<div class="muted">Matched orders only</div>' : ''}
+          ${review.has_results ? `<div><a href="${D.repo}/blob/main/lab/m1-execution/comparisons/${review.week}.json">Trades</a></div>` : ''}</td></tr>`).join('')}
+      </tbody></table></div>` : '<p>Results will appear after the first eligible rebalance and its trade archive arrive.</p>'}
   </section>
 
   <section style="display:grid;gap:12px" aria-label="Checkpoints">
