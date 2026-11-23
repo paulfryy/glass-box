@@ -120,7 +120,9 @@ __CSS__
     return `<div class="label">At the last daily close</div>
       <div class="big mono">${usd(official)}</div>
       <div class="delta ${cls(r)}">${pct(r, 2)} since ${fmtDate(START)}</div>
-      <div class="s">Prices through ${D.status.data_through ? fmtDate(D.status.data_through) : 'pending'}.</div>`;
+      <div class="s">Prices through ${D.status.data_through ? fmtDate(D.status.data_through) : 'pending'}.</div>
+      ${D.liveMark ? `<div class="live-mark" data-live-mark="${esc(JSON.stringify(D.liveMark))}">Loading live estimate…</div>
+        <div class="s">Indicative futures quotes from other exchanges, refreshed each minute. Excludes fees and funding since the last published close.</div>` : ''}`;
   }
   function movers(){
     if (!D.book.length) return '';
@@ -189,7 +191,7 @@ __CSS__
 
   <section class="panel" aria-label="Paper account">
     <div class="hero-grid">
-      <div class="hero" id="hero" aria-live="polite">${hero()}</div>
+      <div class="hero" id="hero">${hero()}</div>
       <div class="stats">
         <div class="stat"><div class="label">Holding BTC instead</div><div class="v">${usd(last ? last.b : D.bankroll)}</div><div class="s ${cls(btcRet)}">${last ? pct(btcRet, 2) + ' at the daily close' : 'from the next daily close'}</div></div>
         <div class="stat"><div class="label">Worst drop</div><div class="v">${dd < 0 ? pct(dd, 1) : '0%'}</div><div class="s">from a previous high</div></div>
@@ -299,3 +301,4 @@ __CSS__
 
 })();
 </script>
+<script type="module" src="/live-marks.js"></script>

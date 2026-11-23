@@ -10,6 +10,7 @@ import csv
 import html
 import json
 import os
+import shutil
 from collections import defaultdict
 from datetime import date, timedelta
 from statistics import mean, stdev
@@ -141,6 +142,23 @@ def equity_points(eq):
     return [{"d": r["date"], "e": float(r["equity"]), "b": float(r["btc_equity"])} for r in eq]
 
 
+def live_marks(equity, positions):
+    if not equity:
+        return {}
+    last = equity[-1]
+    closes = next((r for r in rows("data/closes.csv") if r["time"][:10] == last["d"]), {})
+    week = max((p["week"] for p in positions if p["week"] <= last["d"]), default=None)
+    book = [(p["symbol"], float(p["weight"])) for p in positions if p["week"] == week]
+    marks = {}
+    for name, balance, holdings in (("momentum", last["e"], book), ("btc", last["b"], [("BTCUSDT", 1)])):
+        if holdings:
+            marks[name] = {"balance": balance, "day": last["d"], "holdings": [
+                [symbol, weight, float(closes[symbol]) if closes.get(symbol) else None]
+                for symbol, weight in holdings
+            ]}
+    return marks
+
+
 def weekly_history(eq):
     """Group daily rows by the Monday that started the holding week."""
     wk = defaultdict(lambda: {"net": 1.0, "cost": 0.0, "funding": 0.0, "days": 0})
@@ -232,7 +250,8 @@ def main():
 
     # ---- M1, the candidate
     eq = rows("equity.csv")
-    weeks, book = book_of(rows("positions.csv"), latest)
+    positions = rows("positions.csv")
+    weeks, book = book_of(positions, latest)
     proof_status = {}
     sp = os.path.join(HERE, "proofs", "status.json")
     if os.path.exists(sp):
@@ -244,10 +263,11 @@ def main():
     readiness_path = os.path.join(HERE, readiness.REPORT)
     signal = json.load(open(readiness_path, encoding="utf-8")) if os.path.exists(readiness_path) else None
     m1_points = equity_points(eq)
+    marks = live_marks(m1_points, positions)
     write("template.html", {
         "status": st, "bankroll": BANKROLL, "weeks": weeks, "book": book, "history": weekly_history(eq),
         "equity": m1_points, "review_weeks": REVIEW_WEEKS, "repo": REPO, "proofs": proofs, "band": band,
-        "readiness": signal, "execution": execution_reviews(),
+        "readiness": signal, "execution": execution_reviews(), "liveMark": marks.get("momentum"),
     }, "momentum")
 
     # ---- controls
@@ -299,7 +319,9 @@ def main():
         board.insert(1 + FORWARD.index(f), {"id": fid, "name": f["name"], "kind": "candidate", "href": f"/{fid}/",
                                            "what": f["short"], "start": f["start"], "equity": pts, "status": fst,
                                            "checkpoints": [f["cp13"], f["cp26"]], "bar": bar, **summary(pts)})
-    write("overview.html", {"start": M1_START, "bankroll": BANKROLL, "repo": REPO, "board": board, "replay": exposure_replay})
+    write("overview.html", {"start": M1_START, "bankroll": BANKROLL, "repo": REPO, "board": board,
+                            "replay": exposure_replay, "liveMarks": marks})
+    shutil.copyfile(os.path.join(HERE, "live-marks.js"), os.path.join(ROOT, "public", "live-marks.js"))
     write_redirects()
 
     print(f"built public/lab (overview, momentum, controls): {len(weeks)} week(s), {len(eq)} day(s) of results "

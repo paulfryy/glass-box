@@ -141,7 +141,9 @@ __CSS__
       ${provisional ? `<span class="provisional">Provisional funding${missing > 0 ? ` · ${missing} missing contract-days` : ''}</span>` : ''}`;
   }
   function metrics(s) {
-    return `<td class="num">${usd(s.value)}${s.equity.length ? '' : '<span class="what">Starting balance</span>'}</td>
+    const mark = D.liveMarks[s.id];
+    return `<td class="num">${usd(s.value)}${s.equity.length ? '' : '<span class="what">Starting balance</span>'}
+      ${mark ? `<span class="live-mark" data-live-mark="${esc(JSON.stringify(mark))}" title="Indicative futures quotes from other exchanges">Loading live estimate…</span>` : ''}</td>
       <td class="num ${cls(s.ret)}">${s.equity.length ? pct(s.ret, 2) : '—'}
       <span class="what">${s.equity.length ? 'Since' : s.start > today ? 'Scheduled' : 'Starts'} ${fmtDate(s.start || START)}</span></td>
       <td class="num">${s.equity.length ? pct(s.worst, 1) : '—'}</td>`;
@@ -160,7 +162,7 @@ __CSS__
   document.getElementById('lab').innerHTML = `
   <section class="intro">
     <h1>Strategy Lab</h1>
-    <p>Trading rules tested in public with ${usd0(D.bankroll)} paper accounts. Balances use each account’s latest available daily close.</p>
+    <p>Trading rules tested in public with ${usd0(D.bankroll)} paper accounts. Published balances use the latest daily close. M1 and BTC also show live estimates from other exchanges’ futures quotes.</p>
   </section>
   <section class="panel" aria-label="Forward tests">
     <h2>Forward tests</h2>
@@ -222,3 +224,4 @@ __CSS__
   drawComparison();
 })();
 </script>
+<script type="module" src="/live-marks.js"></script>
