@@ -138,24 +138,80 @@
       "first_seen_utc": "2026-11-23T08:10:19+00:00",
       "last_modified_utc": "2026-11-23T08:05:28+00:00"
     },
+    "ORDIUSDT": {
+      "first_seen_utc": "2026-11-23T08:40:26+00:00",
+      "last_modified_utc": "2026-11-23T08:38:10+00:00"
+    },
+    "PENGUUSDT": {
+      "first_seen_utc": "2026-11-23T08:40:26+00:00",
+      "last_modified_utc": "2026-11-23T08:38:12+00:00"
+    },
     "PEOPLEUSDT": {
       "first_seen_utc": "2026-11-23T08:10:19+00:00",
       "last_modified_utc": "2026-11-23T08:05:32+00:00"
+    },
+    "PIPPINUSDT": {
+      "first_seen_utc": "2026-11-23T08:40:26+00:00",
+      "last_modified_utc": "2026-11-23T08:38:13+00:00"
+    },
+    "PNUTUSDT": {
+      "first_seen_utc": "2026-11-23T08:40:26+00:00",
+      "last_modified_utc": "2026-11-23T08:38:14+00:00"
     },
     "PONKEUSDT": {
       "first_seen_utc": "2026-11-23T08:10:19+00:00",
       "last_modified_utc": "2026-11-23T08:05:33+00:00"
     },
+    "POPCATUSDT": {
+      "first_seen_utc": "2026-11-23T08:40:26+00:00",
+      "last_modified_utc": "2026-11-23T08:38:15+00:00"
+    },
     "PUMPUSDT": {
       "first_seen_utc": "2026-11-23T08:10:19+00:00",
       "last_modified_utc": "2026-11-23T08:05:33+00:00"
     },
+    "SLERFUSDT": {
+      "first_seen_utc": "2026-11-23T08:40:26+00:00",
+      "last_modified_utc": "2026-11-23T08:38:26+00:00"
+    },
+    "SPXUSDT": {
+      "first_seen_utc": "2026-11-23T08:40:26+00:00",
+      "last_modified_utc": "2026-11-23T08:38:30+00:00"
+    },
+    "SWARMSUSDT": {
+      "first_seen_utc": "2026-11-23T08:40:26+00:00",
+      "last_modified_utc": "2026-11-23T08:38:32+00:00"
+    },
+    "TRUMPUSDT": {
+      "first_seen_utc": "2026-11-23T08:40:26+00:00",
+      "last_modified_utc": "2026-11-23T08:38:36+00:00"
+    },
+    "TSTUSDT": {
+      "first_seen_utc": "2026-11-23T08:40:26+00:00",
+      "last_modified_utc": "2026-11-23T08:38:37+00:00"
+    },
+    "TURBOUSDT": {
+      "first_seen_utc": "2026-11-23T08:40:26+00:00",
+      "last_modified_utc": "2026-11-23T08:38:37+00:00"
+    },
+    "VINEUSDT": {
+      "first_seen_utc": "2026-11-23T08:40:27+00:00",
+      "last_modified_utc": "2026-11-23T08:38:40+00:00"
+    },
     "WENUSDT": {
       "first_seen_utc": "2026-11-23T08:10:20+00:00",
       "last_modified_utc": "2026-11-23T08:05:38+00:00"
+    },
+    "WLFIUSDT": {
+      "first_seen_utc": "2026-11-23T08:40:27+00:00",
+      "last_modified_utc": "2026-11-23T08:38:42+00:00"
+    },
+    "ZEREBROUSDT": {
+      "first_seen_utc": "2026-11-23T08:40:27+00:00",
+      "last_modified_utc": "2026-11-23T08:38:45+00:00"
     }
   },
-  "last_poll_utc": "2026-11-23T08:30:24+00:00",
+  "last_poll_utc": "2026-11-23T08:40:26+00:00",
   "reference_day": "2026-11-21",
   "required": [
     "1000000MOGUSDT",
