@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+      url: ${{ steps.deploy.outputs.page_url || steps.retry_deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -33,5 +33,18 @@ jobs:
       - uses: actions/upload-pages-artifact@v5
         with:
           path: public
+          name: github-pages-${{ github.run_attempt }}
       - id: deploy
         uses: actions/deploy-pages@v5
+        continue-on-error: true
+        with:
+          artifact_name: github-pages-${{ github.run_attempt }}
+      # Pages can briefly miss an artifact immediately after a successful upload.
+      - name: Wait before retrying Pages
+        if: steps.deploy.outcome == 'failure'
+        run: sleep 10
+      - id: retry_deploy
+        if: steps.deploy.outcome == 'failure'
+        uses: actions/deploy-pages@v5
+        with:
+          artifact_name: github-pages-${{ github.run_attempt }}
