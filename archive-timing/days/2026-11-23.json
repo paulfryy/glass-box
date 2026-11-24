@@ -174,9 +174,21 @@
       "first_seen_utc": "2026-11-24T08:10:38+00:00",
       "last_modified_utc": "2026-11-24T08:09:06+00:00"
     },
+    "SPXUSDT": {
+      "first_seen_utc": "2026-11-24T10:20:38+00:00",
+      "last_modified_utc": "2026-11-24T10:16:56+00:00"
+    },
     "SWARMSUSDT": {
       "first_seen_utc": "2026-11-24T08:10:38+00:00",
       "last_modified_utc": "2026-11-24T08:09:13+00:00"
+    },
+    "TRUMPUSDT": {
+      "first_seen_utc": "2026-11-24T10:20:38+00:00",
+      "last_modified_utc": "2026-11-24T10:17:04+00:00"
+    },
+    "TSTUSDT": {
+      "first_seen_utc": "2026-11-24T10:20:38+00:00",
+      "last_modified_utc": "2026-11-24T10:17:06+00:00"
     },
     "TURBOUSDT": {
       "first_seen_utc": "2026-11-24T07:50:38+00:00",
@@ -207,7 +219,7 @@
       "last_modified_utc": "2026-11-24T08:00:05+00:00"
     }
   },
-  "last_poll_utc": "2026-11-24T10:10:37+00:00",
+  "last_poll_utc": "2026-11-24T10:20:38+00:00",
   "reference_day": "2026-11-22",
   "required": [
     "1000000MOGUSDT",
