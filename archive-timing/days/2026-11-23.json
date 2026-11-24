@@ -106,6 +106,10 @@
       "first_seen_utc": "2026-11-24T07:50:37+00:00",
       "last_modified_utc": "2026-11-24T07:41:03+00:00"
     },
+    "KOMAUSDT": {
+      "first_seen_utc": "2026-11-24T08:00:42+00:00",
+      "last_modified_utc": "2026-11-24T07:59:15+00:00"
+    },
     "MEMEUSDT": {
       "first_seen_utc": "2026-11-24T07:50:37+00:00",
       "last_modified_utc": "2026-11-24T07:41:19+00:00"
@@ -138,6 +142,10 @@
       "first_seen_utc": "2026-11-24T07:50:38+00:00",
       "last_modified_utc": "2026-11-24T07:41:30+00:00"
     },
+    "PENGUUSDT": {
+      "first_seen_utc": "2026-11-24T08:00:42+00:00",
+      "last_modified_utc": "2026-11-24T07:59:34+00:00"
+    },
     "PEOPLEUSDT": {
       "first_seen_utc": "2026-11-24T07:50:38+00:00",
       "last_modified_utc": "2026-11-24T07:41:32+00:00"
@@ -154,6 +162,10 @@
       "first_seen_utc": "2026-11-24T07:50:38+00:00",
       "last_modified_utc": "2026-11-24T07:41:34+00:00"
     },
+    "POPCATUSDT": {
+      "first_seen_utc": "2026-11-24T08:00:42+00:00",
+      "last_modified_utc": "2026-11-24T07:59:36+00:00"
+    },
     "PUMPUSDT": {
       "first_seen_utc": "2026-11-24T07:50:38+00:00",
       "last_modified_utc": "2026-11-24T07:41:35+00:00"
@@ -161,9 +173,29 @@
     "TURBOUSDT": {
       "first_seen_utc": "2026-11-24T07:50:38+00:00",
       "last_modified_utc": "2026-11-24T07:41:47+00:00"
+    },
+    "USELESSUSDT": {
+      "first_seen_utc": "2026-11-24T08:00:42+00:00",
+      "last_modified_utc": "2026-11-24T07:59:58+00:00"
+    },
+    "VINEUSDT": {
+      "first_seen_utc": "2026-11-24T08:00:42+00:00",
+      "last_modified_utc": "2026-11-24T08:00:00+00:00"
+    },
+    "WENUSDT": {
+      "first_seen_utc": "2026-11-24T08:00:42+00:00",
+      "last_modified_utc": "2026-11-24T08:00:01+00:00"
+    },
+    "WLFIUSDT": {
+      "first_seen_utc": "2026-11-24T08:00:42+00:00",
+      "last_modified_utc": "2026-11-24T08:00:01+00:00"
+    },
+    "ZEREBROUSDT": {
+      "first_seen_utc": "2026-11-24T08:00:42+00:00",
+      "last_modified_utc": "2026-11-24T08:00:05+00:00"
     }
   },
-  "last_poll_utc": "2026-11-24T07:50:37+00:00",
+  "last_poll_utc": "2026-11-24T08:00:42+00:00",
   "reference_day": "2026-11-22",
   "required": [
     "1000000MOGUSDT",
