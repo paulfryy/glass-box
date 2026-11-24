@@ -1,6 +1,6 @@
 {
   "week": "2026-11-23",
-  "state": "waiting_for_candles",
+  "state": "published",
   "expected": [
     "1000000MOGUSDT",
     "1000BONKUSDT",
@@ -59,10 +59,6 @@
   ],
   "missing": {
     "2026-11-22": [],
-    "2026-11-23": [
-      "SPXUSDT",
-      "TRUMPUSDT",
-      "TSTUSDT"
-    ]
+    "2026-11-23": []
   }
 }
