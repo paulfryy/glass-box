@@ -1,0 +1,62 @@
+{
+  "commit": "b7ab278cead89b2cb78a57225ab43fb9e8d44829",
+  "orders": {
+    "1000PEPEUSDT": {
+      "quantity": -194466.48386908582,
+      "reference_close": 0.0034282,
+      "weight_change": -0.133334
+    },
+    "KOMAUSDT": {
+      "quantity": -9668.935643564357,
+      "reference_close": 0.012928,
+      "weight_change": -0.025
+    },
+    "MEMEUSDT": {
+      "quantity": 421443.02090357384,
+      "reference_close": 0.0002966,
+      "weight_change": 0.025
+    },
+    "PENGUUSDT": {
+      "quantity": 75329.94350282487,
+      "reference_close": 0.004425,
+      "weight_change": 0.066667
+    },
+    "PEOPLEUSDT": {
+      "quantity": 25489.396411092985,
+      "reference_close": 0.004904,
+      "weight_change": 0.025
+    },
+    "PIPPINUSDT": {
+      "quantity": 37327.267637178054,
+      "reference_close": 0.01786,
+      "weight_change": 0.133333
+    },
+    "PUMPUSDT": {
+      "quantity": -49368.088467614536,
+      "reference_close": 0.002532,
+      "weight_change": -0.025
+    },
+    "SPXUSDT": {
+      "quantity": -446.2691895751517,
+      "reference_close": 0.2801,
+      "weight_change": -0.025
+    },
+    "TRUMPUSDT": {
+      "quantity": 377.49716874292193,
+      "reference_close": 0.883,
+      "weight_change": 0.066666
+    },
+    "USELESSUSDT": {
+      "quantity": -4339.669313891421,
+      "reference_close": 0.07681,
+      "weight_change": -0.066666
+    },
+    "WLFIUSDT": {
+      "quantity": -4999.640028797697,
+      "reference_close": 0.04167,
+      "weight_change": -0.041667
+    }
+  },
+  "public_by_utc": "2026-11-24T11:36:38.595+00:00",
+  "week": "2026-11-23"
+}
