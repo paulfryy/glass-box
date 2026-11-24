@@ -15,7 +15,6 @@ from zoneinfo import ZoneInfo
 
 
 FIRST = date(2026, 11, 19)
-LAST = date(2026, 12, 2)
 ET = ZoneInfo("America/New_York")
 ARCHIVE = "https://data.binance.vision/data/futures/um/daily/klines"
 
@@ -69,7 +68,7 @@ def observe(directory, closes, day, now):
     pending = sorted(set(record["required"]) - record["files"].keys())
     if not pending:
         print(f"{day}: all {len(record['required'])} candles already observed")
-        return
+        return True
 
     with ThreadPoolExecutor(max_workers=8) as pool:
         observations = list(pool.map(lambda symbol: probe(day, symbol), pending))
@@ -82,6 +81,15 @@ def observe(directory, closes, day, now):
     directory.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(f"{day}: {len(record['files'])}/{len(record['required'])} candles visible, {len(record['errors'])} request errors")
+    return len(record["files"]) == len(record["required"])
+
+
+def lab_needs_close(status, day):
+    for line in status.read_text(encoding="utf-8").splitlines():
+        key, _, value = line.partition("=")
+        if key == "data_through":
+            return date.fromisoformat(value.strip()) < day
+    raise ValueError(f"No data_through date in {status}")
 
 
 def local_time(stamp):
@@ -90,7 +98,7 @@ def local_time(stamp):
 
 def summary(root):
     records = [json.loads(path.read_text(encoding="utf-8")) for path in sorted((root / "days").glob("*.json"))]
-    lines = ["# Binance archive timing", "", f"UTC candle days **{FIRST} through {LAST}**.", "",
+    lines = ["# Binance archive timing", "", f"UTC candle days starting **{FIRST}**.", "",
              "The Cloudflare timer dispatches checks every 10 minutes from 6 a.m. through 4:50 p.m. UTC, "
              "with catch-up checks in the 10 p.m. UTC hour. "
              "Each day tracks contracts with a price on the latest saved M1 close preceding it.", "",
@@ -123,7 +131,7 @@ def summary(root):
                      f"{local_time(min(observed)) if observed else '—'} | "
                      f"{ready} | "
                      f"{local_time(max(modified)) if modified else '—'} |")
-    lines += ["", f"**{complete_days} of {(LAST - FIRST).days + 1}** days have a complete observed set."]
+    lines += ["", f"**{complete_days} of {len(records)}** observed days have a complete set."]
     if already_present:
         lines += [f"{already_present} set(s) were already visible when checked. They provide upper bounds and are "
                   "excluded from the timing median."]
@@ -140,22 +148,22 @@ def summary(root):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--closes", required=True, type=Path)
+    parser.add_argument("--status", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
     now = datetime.now(UTC)
     day = now.date() - timedelta(days=1)
-    done = now >= datetime.combine(LAST + timedelta(days=1), time(22), UTC)
-    if FIRST <= day <= LAST:
-        observe(args.output / "days", args.closes, day, now)
+    ready = False
     if FIRST <= day:
-        args.output.mkdir(parents=True, exist_ok=True)
+        complete = observe(args.output / "days", args.closes, day, now)
+        ready = complete and lab_needs_close(args.status, day)
         report = summary(args.output)
         (args.output / "README.md").write_text(report, encoding="utf-8")
         if path := os.environ.get("GITHUB_STEP_SUMMARY"):
             Path(path).write_text(report, encoding="utf-8")
     if path := os.environ.get("GITHUB_OUTPUT"):
         with Path(path).open("a", encoding="utf-8") as handle:
-            handle.write(f"finished={'true' if done else 'false'}\n")
+            handle.write(f"ready={'true' if ready else 'false'}\n")
 
 
 if __name__ == "__main__":

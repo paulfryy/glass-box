@@ -21,10 +21,10 @@ class ArchiveTimingTest(unittest.TestCase):
             directory = root / "days"
             with patch.object(archive_timing, "probe", side_effect=lambda day, symbol:
                               (symbol, first if symbol == "AAUSDT" else None, None)):
-                archive_timing.observe(directory, closes, day, now)
+                self.assertFalse(archive_timing.observe(directory, closes, day, now))
             with patch.object(archive_timing, "probe", return_value=("BBUSDT", later, None)) as probe:
-                archive_timing.observe(directory, closes, day, now.replace(minute=15))
-                archive_timing.observe(directory, closes, day, now.replace(minute=30))
+                self.assertTrue(archive_timing.observe(directory, closes, day, now.replace(minute=15)))
+                self.assertTrue(archive_timing.observe(directory, closes, day, now.replace(minute=30)))
                 probe.assert_called_once_with(day, "BBUSDT")
 
             record = json.loads((directory / f"{day}.json").read_text(encoding="utf-8"))
@@ -32,3 +32,12 @@ class ArchiveTimingTest(unittest.TestCase):
             self.assertEqual(record["files"]["AAUSDT"], first)
             self.assertEqual(record["files"]["BBUSDT"], later)
             self.assertIn("10.2 hours", archive_timing.summary(root))
+
+    def test_published_close_prevents_another_update(self):
+        day = date(2026, 11, 23)
+        with TemporaryDirectory() as tmp:
+            status = Path(tmp) / "status.txt"
+            status.write_text("data_through=2026-11-22\n", encoding="utf-8")
+            self.assertTrue(archive_timing.lab_needs_close(status, day))
+            status.write_text("data_through=2026-11-23\n", encoding="utf-8")
+            self.assertFalse(archive_timing.lab_needs_close(status, day))

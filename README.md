@@ -28,8 +28,8 @@ The M1 exposure replay starts at the September 28, 2026 close using the original
 
 ## Updates and publication
 
-GitHub Actions updates the three candidates, replays the saved accounts, stamps the position files, commits the new data, and calls the Pages workflow. The update runs at 09:20 and 21:20 UTC and can also be run from **Update Strategy Lab** in Actions. Source pushes to `main` rebuild the site. The build reads only saved lab files.
+GitHub Actions updates the three candidates, replays the saved accounts, stamps the position files, commits the new data, and calls the Pages workflow. The archive monitor starts an update when all candles in its daily cohort are visible and the Lab has an older close. The 09:20 and 21:20 UTC runs also remain scheduled. **Update Strategy Lab** in Actions runs the same update manually. Source pushes to `main` rebuild the site. The build reads only saved lab files.
 
 Daily prices and monthly funding come from Binance's archive. Equity is provisional where funding for a held contract-day is missing. The updater retries missing completed months per contract, and late funding revises equity while the published positions stay fixed. Seesaw positions are computed once a day using data available before each simulated hour.
 
-The archived Cloudflare Worker still needs to be retired in Cloudflare if it is deployed. The current workflows require no Helius or Worker credentials.
+The deployed Cloudflare Worker dispatches the archive monitor and the scheduled updates.

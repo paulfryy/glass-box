@@ -14,9 +14,7 @@ jobs:
     steps:
       - id: window
         run: |
-          day=$(date -u +%F)
           hour=$(date -u +%-H)
-          if [[ "$day" < 2026-11-20 || "$day" > 2026-12-03 ]]; then exit 0; fi
           if (( (hour >= 6 && hour < 17) || hour == 22 )); then
             echo 'due=true' >> "$GITHUB_OUTPUT"
           fi
@@ -27,4 +25,12 @@ jobs:
     uses: ./.github/workflows/archive-timing.yml
     permissions:
       contents: write
-      actions: write
+
+  refresh:
+    needs: observe
+    if: needs.observe.outputs.ready == 'true'
+    uses: ./.github/workflows/strategy-lab.yml
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
