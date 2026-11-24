@@ -1,0 +1,35 @@
+{
+  "1000PEPEUSDT": {
+    "state": "waiting_for_archive"
+  },
+  "KOMAUSDT": {
+    "state": "waiting_for_archive"
+  },
+  "MEMEUSDT": {
+    "state": "waiting_for_archive"
+  },
+  "PENGUUSDT": {
+    "state": "waiting_for_archive"
+  },
+  "PEOPLEUSDT": {
+    "state": "waiting_for_archive"
+  },
+  "PIPPINUSDT": {
+    "state": "waiting_for_archive"
+  },
+  "PUMPUSDT": {
+    "state": "waiting_for_archive"
+  },
+  "SPXUSDT": {
+    "state": "waiting_for_archive"
+  },
+  "TRUMPUSDT": {
+    "state": "waiting_for_archive"
+  },
+  "USELESSUSDT": {
+    "state": "waiting_for_archive"
+  },
+  "WLFIUSDT": {
+    "state": "waiting_for_archive"
+  }
+}
