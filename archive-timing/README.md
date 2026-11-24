@@ -1,6 +1,6 @@
 # Binance archive timing
 
-UTC candle days **2026-11-19 through 2026-12-02**.
+UTC candle days starting **2026-11-19**.
 
 The Cloudflare timer dispatches checks every 10 minutes from 6 a.m. through 4:50 p.m. UTC, with catch-up checks in the 10 p.m. UTC hour. Each day tracks contracts with a price on the latest saved M1 close preceding it.
 
@@ -14,7 +14,7 @@ Times below are Eastern. First seen means the first successful poll. The server 
 | 2026-11-22 | 54/54 | Nov 23, 3:10 AM | Nov 23, 4:00 AM | Nov 23, 3:57 AM |
 | 2026-11-23 | 54/54 | Nov 24, 2:40 AM | Nov 24, 5:20 AM | Nov 24, 5:17 AM |
 
-**5 of 14** days have a complete observed set.
+**5 of 5** observed days have a complete set.
 1 set(s) were already visible when checked. They provide upper bounds and are excluded from the timing median.
 For 4 day(s) observed going from incomplete to complete, the median was **9.5 hours** after close (range 9.0–10.3 hours).
 For the 1 observed Monday candle day(s), the median was **10.3 hours**.
