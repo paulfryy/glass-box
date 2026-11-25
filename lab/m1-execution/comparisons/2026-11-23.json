@@ -1,35 +1,79 @@
 {
   "1000PEPEUSDT": {
-    "state": "waiting_for_archive"
+    "delay_cost_usd": -7.42862,
+    "state": "matched",
+    "trade_id": "1177395793",
+    "trade_price": 0.0034664,
+    "trade_utc": "2026-11-24T11:36:39.275+00:00"
   },
   "KOMAUSDT": {
-    "state": "waiting_for_archive"
+    "delay_cost_usd": 3.190749,
+    "state": "matched",
+    "trade_id": "62498976",
+    "trade_price": 0.012598,
+    "trade_utc": "2026-11-24T11:36:44.223+00:00"
   },
   "MEMEUSDT": {
-    "state": "waiting_for_archive"
+    "delay_cost_usd": -3.287256,
+    "state": "matched",
+    "trade_id": "168325867",
+    "trade_price": 0.0002888,
+    "trade_utc": "2026-11-24T11:36:43.289+00:00"
   },
   "PENGUUSDT": {
-    "state": "waiting_for_archive"
+    "delay_cost_usd": -9.491573,
+    "state": "matched",
+    "trade_id": "209178056",
+    "trade_price": 0.004299,
+    "trade_utc": "2026-11-24T11:36:39.579+00:00"
   },
   "PEOPLEUSDT": {
-    "state": "waiting_for_archive"
+    "delay_cost_usd": -1.401917,
+    "state": "matched",
+    "trade_id": "203480910",
+    "trade_price": 0.004849,
+    "trade_utc": "2026-11-24T11:36:39.479+00:00"
   },
   "PIPPINUSDT": {
-    "state": "waiting_for_archive"
+    "delay_cost_usd": 3.732727,
+    "state": "matched",
+    "trade_id": "341887866",
+    "trade_price": 0.01796,
+    "trade_utc": "2026-11-24T11:36:41.397+00:00"
   },
   "PUMPUSDT": {
-    "state": "waiting_for_archive"
+    "delay_cost_usd": 5.331754,
+    "state": "matched",
+    "trade_id": "73093883",
+    "trade_price": 0.002424,
+    "trade_utc": "2026-11-24T11:36:39.276+00:00"
   },
   "SPXUSDT": {
-    "state": "waiting_for_archive"
+    "delay_cost_usd": 0.981792,
+    "state": "matched",
+    "trade_id": "88009932",
+    "trade_price": 0.2779,
+    "trade_utc": "2026-11-24T11:36:45.680+00:00"
   },
   "TRUMPUSDT": {
-    "state": "waiting_for_archive"
+    "delay_cost_usd": -13.967395,
+    "state": "matched",
+    "trade_id": "204243270",
+    "trade_price": 0.846,
+    "trade_utc": "2026-11-24T11:36:41.341+00:00"
   },
   "USELESSUSDT": {
-    "state": "waiting_for_archive"
+    "delay_cost_usd": 8.809529,
+    "state": "matched",
+    "trade_id": "97417614",
+    "trade_price": 0.07478,
+    "trade_utc": "2026-11-24T11:36:39.233+00:00"
   },
   "WLFIUSDT": {
-    "state": "waiting_for_archive"
+    "delay_cost_usd": 4.549672,
+    "state": "matched",
+    "trade_id": "42915815",
+    "trade_price": 0.04076,
+    "trade_utc": "2026-11-24T11:36:38.830+00:00"
   }
 }
