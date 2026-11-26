@@ -193,9 +193,13 @@
     "WENUSDT": {
       "first_seen_utc": "2026-11-26T07:50:59+00:00",
       "last_modified_utc": "2026-11-26T07:48:20+00:00"
+    },
+    "WLFIUSDT": {
+      "first_seen_utc": "2026-11-26T08:11:08+00:00",
+      "last_modified_utc": "2026-11-26T08:01:21+00:00"
     }
   },
-  "last_poll_utc": "2026-11-26T08:01:02+00:00",
+  "last_poll_utc": "2026-11-26T08:11:08+00:00",
   "reference_day": "2026-11-24",
   "required": [
     "1000000MOGUSDT",
