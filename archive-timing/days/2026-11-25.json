@@ -186,12 +186,16 @@
       "first_seen_utc": "2026-11-26T07:41:00+00:00",
       "last_modified_utc": "2026-11-26T07:34:35+00:00"
     },
+    "USELESSUSDT": {
+      "first_seen_utc": "2026-11-26T08:01:02+00:00",
+      "last_modified_utc": "2026-11-26T07:53:46+00:00"
+    },
     "WENUSDT": {
       "first_seen_utc": "2026-11-26T07:50:59+00:00",
       "last_modified_utc": "2026-11-26T07:48:20+00:00"
     }
   },
-  "last_poll_utc": "2026-11-26T07:50:59+00:00",
+  "last_poll_utc": "2026-11-26T08:01:02+00:00",
   "reference_day": "2026-11-24",
   "required": [
     "1000000MOGUSDT",
