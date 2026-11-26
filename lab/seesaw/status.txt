@@ -1,4 +1,4 @@
 data_through=2026-11-25
 funding_through=2026-10-31
 funding_missing_contract_days=787
-updated_utc=2026-11-26 09:23
+updated_utc=2026-11-26 21:21
