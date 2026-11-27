@@ -150,6 +150,10 @@
       "first_seen_utc": "2026-11-27T07:40:46+00:00",
       "last_modified_utc": "2026-11-27T07:38:12+00:00"
     },
+    "PONKEUSDT": {
+      "first_seen_utc": "2026-11-27T07:50:47+00:00",
+      "last_modified_utc": "2026-11-27T07:41:13+00:00"
+    },
     "POPCATUSDT": {
       "first_seen_utc": "2026-11-27T07:40:47+00:00",
       "last_modified_utc": "2026-11-27T07:38:12+00:00"
@@ -183,7 +187,7 @@
       "last_modified_utc": "2026-11-27T07:38:23+00:00"
     }
   },
-  "last_poll_utc": "2026-11-27T07:40:45+00:00",
+  "last_poll_utc": "2026-11-27T07:50:46+00:00",
   "reference_day": "2026-11-25",
   "required": [
     "1000000MOGUSDT",
