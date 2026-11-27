@@ -15,7 +15,7 @@ Times below are Eastern. First seen means the first successful poll. The server 
 | 2026-11-23 | 54/54 | Nov 24, 2:40 AM | Nov 24, 5:20 AM | Nov 24, 5:17 AM |
 | 2026-11-24 | 54/54 | Nov 25, 2:41 AM | Nov 25, 3:41 AM | Nov 25, 3:39 AM |
 | 2026-11-25 | 54/54 | Nov 26, 2:40 AM | Nov 26, 4:21 AM | Nov 26, 4:13 AM |
-| 2026-11-26 | 51/54 | Nov 27, 2:40 AM | — | Nov 27, 2:58 AM |
+| 2026-11-26 | 52/54 | Nov 27, 2:40 AM | — | Nov 27, 3:07 AM |
 
 **7 of 8** observed days have a complete set.
 1 set(s) were already visible when checked. They provide upper bounds and are excluded from the timing median.

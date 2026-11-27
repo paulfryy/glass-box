@@ -194,6 +194,10 @@
       "first_seen_utc": "2026-11-27T08:00:47+00:00",
       "last_modified_utc": "2026-11-27T07:58:40+00:00"
     },
+    "VINEUSDT": {
+      "first_seen_utc": "2026-11-27T08:10:53+00:00",
+      "last_modified_utc": "2026-11-27T08:07:24+00:00"
+    },
     "WENUSDT": {
       "first_seen_utc": "2026-11-27T08:00:47+00:00",
       "last_modified_utc": "2026-11-27T07:58:42+00:00"
@@ -207,7 +211,7 @@
       "last_modified_utc": "2026-11-27T07:38:23+00:00"
     }
   },
-  "last_poll_utc": "2026-11-27T08:00:47+00:00",
+  "last_poll_utc": "2026-11-27T08:10:52+00:00",
   "reference_day": "2026-11-25",
   "required": [
     "1000000MOGUSDT",
