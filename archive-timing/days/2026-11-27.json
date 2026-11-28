@@ -114,6 +114,10 @@
       "first_seen_utc": "2026-11-28T08:30:29+00:00",
       "last_modified_utc": "2026-11-28T08:22:24+00:00"
     },
+    "MEWUSDT": {
+      "first_seen_utc": "2026-11-28T08:50:34+00:00",
+      "last_modified_utc": "2026-11-28T08:47:30+00:00"
+    },
     "MOODENGUSDT": {
       "first_seen_utc": "2026-11-28T08:30:30+00:00",
       "last_modified_utc": "2026-11-28T08:22:26+00:00"
@@ -121,6 +125,10 @@
     "MUBARAKUSDT": {
       "first_seen_utc": "2026-11-28T08:30:29+00:00",
       "last_modified_utc": "2026-11-28T08:22:27+00:00"
+    },
+    "MYROUSDT": {
+      "first_seen_utc": "2026-11-28T08:50:34+00:00",
+      "last_modified_utc": "2026-11-28T08:47:34+00:00"
     },
     "NOTUSDT": {
       "first_seen_utc": "2026-11-28T08:30:29+00:00",
@@ -138,6 +146,10 @@
       "first_seen_utc": "2026-11-28T08:30:29+00:00",
       "last_modified_utc": "2026-11-28T08:22:35+00:00"
     },
+    "PIPPINUSDT": {
+      "first_seen_utc": "2026-11-28T08:50:34+00:00",
+      "last_modified_utc": "2026-11-28T08:47:44+00:00"
+    },
     "PNUTUSDT": {
       "first_seen_utc": "2026-11-28T08:30:30+00:00",
       "last_modified_utc": "2026-11-28T08:22:36+00:00"
@@ -149,9 +161,37 @@
     "POPCATUSDT": {
       "first_seen_utc": "2026-11-28T08:30:30+00:00",
       "last_modified_utc": "2026-11-28T08:22:36+00:00"
+    },
+    "PUMPUSDT": {
+      "first_seen_utc": "2026-11-28T08:50:34+00:00",
+      "last_modified_utc": "2026-11-28T08:47:47+00:00"
+    },
+    "SLERFUSDT": {
+      "first_seen_utc": "2026-11-28T08:50:34+00:00",
+      "last_modified_utc": "2026-11-28T08:47:56+00:00"
+    },
+    "SPXUSDT": {
+      "first_seen_utc": "2026-11-28T08:50:34+00:00",
+      "last_modified_utc": "2026-11-28T08:48:00+00:00"
+    },
+    "SWARMSUSDT": {
+      "first_seen_utc": "2026-11-28T08:50:34+00:00",
+      "last_modified_utc": "2026-11-28T08:48:02+00:00"
+    },
+    "TRUMPUSDT": {
+      "first_seen_utc": "2026-11-28T08:50:34+00:00",
+      "last_modified_utc": "2026-11-28T08:48:05+00:00"
+    },
+    "TSTUSDT": {
+      "first_seen_utc": "2026-11-28T08:50:34+00:00",
+      "last_modified_utc": "2026-11-28T08:48:05+00:00"
+    },
+    "ZEREBROUSDT": {
+      "first_seen_utc": "2026-11-28T08:50:35+00:00",
+      "last_modified_utc": "2026-11-28T08:48:08+00:00"
     }
   },
-  "last_poll_utc": "2026-11-28T08:40:29+00:00",
+  "last_poll_utc": "2026-11-28T08:50:34+00:00",
   "reference_day": "2026-11-26",
   "required": [
     "1000000MOGUSDT",
