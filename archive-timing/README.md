@@ -16,11 +16,11 @@ Times below are Eastern. First seen means the first successful poll. The server 
 | 2026-11-24 | 54/54 | Nov 25, 2:41 AM | Nov 25, 3:41 AM | Nov 25, 3:39 AM |
 | 2026-11-25 | 54/54 | Nov 26, 2:40 AM | Nov 26, 4:21 AM | Nov 26, 4:13 AM |
 | 2026-11-26 | 54/54 | Nov 27, 2:40 AM | Nov 27, 3:30 AM | Nov 27, 3:29 AM |
-| 2026-11-27 | 53/54 | Nov 28, 3:30 AM | — | Nov 28, 4:06 AM |
+| 2026-11-27 | 54/54 | Nov 28, 3:30 AM | Nov 28, 4:30 AM | Nov 28, 4:23 AM |
 
-**8 of 9** observed days have a complete set.
+**9 of 9** observed days have a complete set.
 1 set(s) were already visible when checked. They provide upper bounds and are excluded from the timing median.
-For 7 day(s) observed going from incomplete to complete, the median was **9.3 hours** after close (range 8.5–10.3 hours).
+For 8 day(s) observed going from incomplete to complete, the median was **9.3 hours** after close (range 8.5–10.3 hours).
 For the 1 observed Monday candle day(s), the median was **10.3 hours**.
 
 [Daily observation records](days/)
