@@ -1,8 +1,157 @@
 {
   "candle_day": "2026-11-27",
   "errors": {},
-  "files": {},
-  "last_poll_utc": "2026-11-28T08:20:28+00:00",
+  "files": {
+    "1000000MOGUSDT": {
+      "first_seen_utc": "2026-11-28T08:30:28+00:00",
+      "last_modified_utc": "2026-11-28T08:21:10+00:00"
+    },
+    "1000BONKUSDT": {
+      "first_seen_utc": "2026-11-28T08:30:28+00:00",
+      "last_modified_utc": "2026-11-28T08:21:11+00:00"
+    },
+    "1000CATUSDT": {
+      "first_seen_utc": "2026-11-28T08:30:28+00:00",
+      "last_modified_utc": "2026-11-28T08:21:11+00:00"
+    },
+    "1000FLOKIUSDT": {
+      "first_seen_utc": "2026-11-28T08:30:28+00:00",
+      "last_modified_utc": "2026-11-28T08:21:11+00:00"
+    },
+    "1000PEPEUSDT": {
+      "first_seen_utc": "2026-11-28T08:30:28+00:00",
+      "last_modified_utc": "2026-11-28T08:21:12+00:00"
+    },
+    "1000RATSUSDT": {
+      "first_seen_utc": "2026-11-28T08:30:28+00:00",
+      "last_modified_utc": "2026-11-28T08:21:12+00:00"
+    },
+    "1000SATSUSDT": {
+      "first_seen_utc": "2026-11-28T08:30:28+00:00",
+      "last_modified_utc": "2026-11-28T08:21:12+00:00"
+    },
+    "1000SHIBUSDT": {
+      "first_seen_utc": "2026-11-28T08:30:28+00:00",
+      "last_modified_utc": "2026-11-28T08:21:12+00:00"
+    },
+    "1000XUSDT": {
+      "first_seen_utc": "2026-11-28T08:30:28+00:00",
+      "last_modified_utc": "2026-11-28T08:21:13+00:00"
+    },
+    "1MBABYDOGEUSDT": {
+      "first_seen_utc": "2026-11-28T08:30:28+00:00",
+      "last_modified_utc": "2026-11-28T08:21:13+00:00"
+    },
+    "ACTUSDT": {
+      "first_seen_utc": "2026-11-28T08:30:29+00:00",
+      "last_modified_utc": "2026-11-28T08:21:15+00:00"
+    },
+    "AI16ZUSDT": {
+      "first_seen_utc": "2026-11-28T08:30:29+00:00",
+      "last_modified_utc": "2026-11-28T08:21:17+00:00"
+    },
+    "ARCUSDT": {
+      "first_seen_utc": "2026-11-28T08:30:29+00:00",
+      "last_modified_utc": "2026-11-28T08:21:23+00:00"
+    },
+    "BANUSDT": {
+      "first_seen_utc": "2026-11-28T08:30:29+00:00",
+      "last_modified_utc": "2026-11-28T08:21:29+00:00"
+    },
+    "BOMEUSDT": {
+      "first_seen_utc": "2026-11-28T08:30:29+00:00",
+      "last_modified_utc": "2026-11-28T08:21:34+00:00"
+    },
+    "BRETTUSDT": {
+      "first_seen_utc": "2026-11-28T08:30:29+00:00",
+      "last_modified_utc": "2026-11-28T08:21:35+00:00"
+    },
+    "BTCUSDT": {
+      "first_seen_utc": "2026-11-28T08:30:29+00:00",
+      "last_modified_utc": "2026-11-28T08:21:37+00:00"
+    },
+    "CATUSDT": {
+      "first_seen_utc": "2026-11-28T08:30:29+00:00",
+      "last_modified_utc": "2026-11-28T08:21:39+00:00"
+    },
+    "CHILLGUYUSDT": {
+      "first_seen_utc": "2026-11-28T08:30:29+00:00",
+      "last_modified_utc": "2026-11-28T08:21:41+00:00"
+    },
+    "DEGENUSDT": {
+      "first_seen_utc": "2026-11-28T08:30:29+00:00",
+      "last_modified_utc": "2026-11-28T08:21:49+00:00"
+    },
+    "DOGEUSDT": {
+      "first_seen_utc": "2026-11-28T08:30:29+00:00",
+      "last_modified_utc": "2026-11-28T08:21:51+00:00"
+    },
+    "DOGSUSDT": {
+      "first_seen_utc": "2026-11-28T08:30:29+00:00",
+      "last_modified_utc": "2026-11-28T08:21:51+00:00"
+    },
+    "FARTCOINUSDT": {
+      "first_seen_utc": "2026-11-28T08:30:29+00:00",
+      "last_modified_utc": "2026-11-28T08:21:58+00:00"
+    },
+    "GOATUSDT": {
+      "first_seen_utc": "2026-11-28T08:30:29+00:00",
+      "last_modified_utc": "2026-11-28T08:22:04+00:00"
+    },
+    "GRIFFAINUSDT": {
+      "first_seen_utc": "2026-11-28T08:30:29+00:00",
+      "last_modified_utc": "2026-11-28T08:22:04+00:00"
+    },
+    "HMSTRUSDT": {
+      "first_seen_utc": "2026-11-28T08:30:29+00:00",
+      "last_modified_utc": "2026-11-28T08:22:08+00:00"
+    },
+    "KOMAUSDT": {
+      "first_seen_utc": "2026-11-28T08:30:29+00:00",
+      "last_modified_utc": "2026-11-28T08:22:17+00:00"
+    },
+    "MEMEUSDT": {
+      "first_seen_utc": "2026-11-28T08:30:29+00:00",
+      "last_modified_utc": "2026-11-28T08:22:24+00:00"
+    },
+    "MOODENGUSDT": {
+      "first_seen_utc": "2026-11-28T08:30:30+00:00",
+      "last_modified_utc": "2026-11-28T08:22:26+00:00"
+    },
+    "MUBARAKUSDT": {
+      "first_seen_utc": "2026-11-28T08:30:29+00:00",
+      "last_modified_utc": "2026-11-28T08:22:27+00:00"
+    },
+    "NOTUSDT": {
+      "first_seen_utc": "2026-11-28T08:30:29+00:00",
+      "last_modified_utc": "2026-11-28T08:22:31+00:00"
+    },
+    "ORDIUSDT": {
+      "first_seen_utc": "2026-11-28T08:30:30+00:00",
+      "last_modified_utc": "2026-11-28T08:22:34+00:00"
+    },
+    "PENGUUSDT": {
+      "first_seen_utc": "2026-11-28T08:30:30+00:00",
+      "last_modified_utc": "2026-11-28T08:22:35+00:00"
+    },
+    "PEOPLEUSDT": {
+      "first_seen_utc": "2026-11-28T08:30:29+00:00",
+      "last_modified_utc": "2026-11-28T08:22:35+00:00"
+    },
+    "PNUTUSDT": {
+      "first_seen_utc": "2026-11-28T08:30:30+00:00",
+      "last_modified_utc": "2026-11-28T08:22:36+00:00"
+    },
+    "PONKEUSDT": {
+      "first_seen_utc": "2026-11-28T08:30:30+00:00",
+      "last_modified_utc": "2026-11-28T08:22:36+00:00"
+    },
+    "POPCATUSDT": {
+      "first_seen_utc": "2026-11-28T08:30:30+00:00",
+      "last_modified_utc": "2026-11-28T08:22:36+00:00"
+    }
+  },
+  "last_poll_utc": "2026-11-28T08:30:28+00:00",
   "reference_day": "2026-11-26",
   "required": [
     "1000000MOGUSDT",
